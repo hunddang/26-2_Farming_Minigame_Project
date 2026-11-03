@@ -40,6 +40,15 @@ namespace NightCafe
             Check(Screen.width == 1920 && Screen.height == 1080, "Player must render at FHD.");
             Check(UnityEngine.SceneManagement.SceneManager.sceneCountInBuildSettings == 2, "Exactly two scenes must be built.");
             Check((Camera.main.cullingMask & (1 << 10)) == 0, "Security movement view must hide cafe objects.");
+            int authoredObjects = game.view.GetComponentsInChildren<Transform>(true).Length;
+            for (int i = 0; i < 3; i++)
+            {
+                game.view.rulesButton.onClick.Invoke();
+                Check(game.view.rules.activeSelf && game.InputBlocked, "Rules button must open the authored overlay.");
+                game.view.closeButtons[0].onClick.Invoke();
+                Check(!game.view.rules.activeSelf && !game.InputBlocked, "Close button must hide and retain the authored overlay.");
+            }
+            Check(game.view.GetComponentsInChildren<Transform>(true).Length == authoredObjects, "Repeated overlays must not create or destroy presentation objects.");
             game.World.Player.Teleport(new Vector2(-15, 6.5f));
             yield return new WaitForSeconds(0.1f);
             Check(game.CurrentTarget != null && game.CurrentTarget.kind == InteractionKind.Camera, "CCTV must be reachable from in front of the desk.");
@@ -122,6 +131,8 @@ namespace NightCafe
             game.World.Player.Teleport(CafeWorld.SecuritySpawn);
             yield return null; yield return null;
             Check(game.Session.Phase == ShiftPhase.Complete, "Returning to security must complete day.");
+            Check(game.view.complete.activeSelf && !game.view.failure.activeSelf, "Completion must show only the authored completion overlay.");
+            Check(game.view.GetComponentsInChildren<Transform>(true).Length == authoredObjects, "All gameplay overlays must reuse the saved hierarchy.");
             ScreenCapture.CaptureScreenshot(OutputPath("07-complete.png"));
             yield return new WaitForSeconds(0.5f);
             InputSystem.RemoveDevice(testKeyboard);

@@ -10,7 +10,7 @@ namespace NightCafe
         public Vector2 Facing { get; private set; } = Vector2.down;
         public bool FlashlightOn { get; private set; } = true;
         private Rigidbody2D body;
-        private Transform beam;
+        public Transform flashlight;
         private Vector2 movement;
 
         private void Awake()
@@ -21,7 +21,7 @@ namespace NightCafe
             body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
             body.interpolation = RigidbodyInterpolation2D.Interpolate;
             GetComponent<CircleCollider2D>().radius = 0.31f;
-            beam = CafeWorld.Flashlight(transform);
+
         }
 
         private void Update()
@@ -36,8 +36,8 @@ namespace NightCafe
             movement = movement.normalized;
             if (movement.sqrMagnitude > 0) Facing = movement;
             if (keys.fKey.wasPressedThisFrame) FlashlightOn = !FlashlightOn;
-            beam.gameObject.SetActive(FlashlightOn);
-            beam.rotation = Quaternion.Euler(0, 0, Mathf.Atan2(Facing.y, Facing.x) * Mathf.Rad2Deg - 90);
+            flashlight.gameObject.SetActive(FlashlightOn);
+            flashlight.rotation = Quaternion.Euler(0, 0, Mathf.Atan2(Facing.y, Facing.x) * Mathf.Rad2Deg - 90);
             movement *= Game.Tuning.moveSpeed * (keys.leftShiftKey.isPressed ? Game.Tuning.runMultiplier : 1);
         }
 

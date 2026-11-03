@@ -25,25 +25,8 @@ public static class NightCafeBuild
     [MenuItem("Night Cafe/Rebuild Foundation Scenes")]
     public static void PrepareScenes()
     {
-        Directory.CreateDirectory("Assets/Data");
-        const string tuningPath = "Assets/Data/DayOneTuning.asset";
-        var tuning = AssetDatabase.LoadAssetAtPath<GameTuning>(tuningPath);
-        if (tuning == null)
-        {
-            tuning = ScriptableObject.CreateInstance<GameTuning>();
-            AssetDatabase.CreateAsset(tuning, tuningPath);
-        }
-        var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-        new GameObject("Start Screen").AddComponent<StartScreen>();
-        EditorSceneManager.SaveScene(scene, Lobby);
-        scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-        var game = new GameObject("Day 01 · Night Shift").AddComponent<NightGame>();
-        game.tuning = tuning;
-        EditorSceneManager.SaveScene(scene, InGame);
-        EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(Lobby, true), new EditorBuildSettingsScene(InGame, true) };
+        CafeSceneAuthoring.RebuildScenes();
         ConfigureWindows();
-        AssetDatabase.SaveAssets();
-        EditorSceneManager.OpenScene(Lobby);
     }
 
     private static void ConfigureWindows()

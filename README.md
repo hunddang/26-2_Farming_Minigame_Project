@@ -16,7 +16,9 @@ Unity 6000.3.18f1 기반의 Windows 64비트, FHD 1920×1080 창 모드 게임 �
 | Lobby | 게임 시작 화면, 조작 안내, 종료 |
 | InGame | 감시실·로비·카페·창고·숙직실, 사건, 실패/재도전, 일시정지, 1일차 완료 |
 
-추가 씬은 없습니다. 결과와 문서, CCTV는 인게임 Canvas의 패널로 표시합니다. 씬의 루트 컴포넌트가 플레이 시작 시 맵과 UI를 생성하며, 모든 화면은 FHD Canvas 기준입니다. 현재 시각 요소는 외부 에셋 없이 코드로 생성한 회색상자 단계의 도형입니다.
+추가 씬은 없습니다. 맵, 카메라, UI와 비활성 팝업을 씬·프리팹에 저장했습니다. Play 전에도 Hierarchy에서 위치·이미지·텍스트·충돌 영역을 편집할 수 있습니다. 모든 화면은 FHD Canvas 기준입니다. `Assets/Art/NightCafe`의 픽셀 아트 PNG를 SpriteRenderer와 UI Image에 연결했습니다. 이미지는 Pillow로 직접 제작했으며 이미지 모델/API로 생성한 결과물은 아닙니다.
+
+자세한 Hierarchy와 수정 위치는 [화면 구조 안내](Docs/Presentation.md)를 참고하세요.
 
 ## 조작
 
@@ -47,17 +49,20 @@ Unity 6000.3.18f1 기반의 Windows 64비트, FHD 1920×1080 창 모드 게임 �
 
 - `Assets/Data/DayOneTuning.asset`: 제한 시간 180초, 오답 20초, 5초간 2배 범람, 이동 속도, 상호작용 거리, 3초 자동 정리, 재료 순서. 기획의 미정 항목에 대한 임시 값입니다.
 - `ShiftSession`: Unity 화면과 독립된 사건 상태, 인벤토리, 재료 판정, 재도전 규칙.
-- `NightGame`: 입력 모드, 상호작용, 사건 진행, CCTV·문서·HUD·결과 화면.
+- `NightGame`: 입력 모드, 상호작용, 사건 진행과 저장된 화면의 상태 갱신.
+- `NightGameView`: HUD·인벤토리·CCTV·문서·일시정지·결과 패널의 Inspector 참조와 버튼 연결.
 - `NightPlayer`: Input System 기반 이동과 물리 충돌, 달리기, 방향 손전등.
-- `CafeWorld`: 방 연결, 가구·벽·문·재료 배치와 도형 표현. 최종 아트·프리팹으로 교체할 지점입니다.
-- `StartScreen` / `CafeUi`: 시작 화면, 1920×1080 UI와 Windows 한글 시스템 글꼴.
+- `CafeWorld`: 씬에 배치된 플레이어·컵·범람·상호작용 대상의 참조. `CafeWorld.prefab` 안에서 방·가구·문·재료를 편집합니다.
+- `StartScreen`: 저장된 메뉴의 입력·버튼 선택·도움말 표시·씬 전환.
+- `CafeUi` / `CafeButtonStyle`: 공통 색상, 창 설정, 이미지 기반 버튼 선택 표현.
+- `Assets/Editor/*Authoring.cs`: 필요할 때만 실행하는 에디터 전용 초기 제작 도구. 일반 플레이에서는 실행되지 않습니다.
 
-한글은 Windows의 맑은 고딕을 사용합니다. 현재 손전등은 방향을 보여 주는 도형 표현이며, 시야 차폐·광원 기반 암전은 후속 작업입니다. 2–5일차, 복도 괴물, 우회 퍼즐, 최종 아트·익사 애니메이션은 이번 1일차 기반에 포함하지 않았습니다.
+한글은 프로젝트에 포함한 나눔고딕을 사용합니다. 글꼴 라이선스는 `Assets/Art/Fonts/OFL.txt`에 있습니다. 손전등은 프리팹에 저장된 반투명 스프라이트이며, 시야 차폐·광원 기반 암전은 후속 작업입니다. 2–5일차, 복도 괴물, 우회 퍼즐, 익사 애니메이션은 이번 1일차 기반에 포함하지 않았습니다.
 
 ## 검증과 빌드
 
 Unity 메뉴의 `Night Cafe/Validate Day One Rules`로 상태·재료 순서·오답 페널티·가속 시간 경계·실패·재도전·자동 정리·복귀 조건을 검사합니다. `Night Cafe/Build Windows FHD`로 두 씬만 Windows x64 개발 빌드를 생성합니다.
 
-`Night Cafe/Rebuild Foundation Scenes`는 두 씬을 초기 부트스트랩으로 다시 저장하는 도구입니다. 씬을 직접 편집한 뒤에는 이 명령을 사용하면 해당 씬 편집을 덮어쓰므로, 일반 작업에는 기존 씬을 그대로 사용합니다.
+`Night Cafe/Rebuild Authored Scenes` 또는 기존 `Rebuild Foundation Scenes`는 두 씬과 프리팹을 초기 제작 배치로 다시 저장합니다. 기존 씬은 `Artifacts/SceneBackups`에 백업합니다. 일반 작업에는 기존 씬·프리팹을 직접 편집하세요. 이 제작 도구를 다시 실행하면 해당 씬·프리팹의 수동 편집을 초기화합니다.
 
 개발용 실행 검증은 `NightCafe.exe -foundationSmokeTest -testArtifacts <절대경로>`입니다. 실제 플레이어에서 FHD·두 씬·CCTV 입력 분리·문 충돌·사건 시작·문서 중 시간·오답·일시정지·실패·재도전·정답·자동 정리·복귀 완료를 검사하고 스크린샷과 결과를 지정 폴더에 남긴 뒤 종료합니다. 검증 모드는 일반 실행에서 동작하지 않습니다.

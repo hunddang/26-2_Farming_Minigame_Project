@@ -12,8 +12,14 @@ namespace NightCafe
         public Ingredient ingredient;
         public bool isOpen;
         public bool securityDoor;
-        private SpriteRenderer marker;
-        private Color original;
+        [SerializeField] private SpriteRenderer marker;
+        [SerializeField] private Color original = Color.white;
+        private void Awake()
+        {
+            if (marker == null) marker = GetComponent<SpriteRenderer>();
+            original = marker.color;
+            if (kind == InteractionKind.Door) SetDoor(isOpen);
+        }
 
         public void ConfigureMarker(SpriteRenderer value)
         {
@@ -23,16 +29,19 @@ namespace NightCafe
 
         public void Highlight(bool enabled)
         {
-            if (marker != null) marker.color = enabled ? new Color(1, 0.83f, 0.39f) : original;
+            if (marker != null) marker.color = enabled ? new Color(1, 0.83f, 0.39f) : BaseColor;
         }
+
+        private Color BaseColor => kind == InteractionKind.Door && isOpen
+            ? new Color(original.r, original.g, original.b, 0.2f) : original;
 
         public void SetDoor(bool open)
         {
             isOpen = open;
             var obstacle = GetComponent<BoxCollider2D>();
             if (obstacle != null) obstacle.enabled = !open;
-            var visual = GetComponent<SpriteRenderer>();
-            if (visual != null) visual.color = open ? new Color(0.3f, 0.7f, 0.6f, 0.2f) : new Color(0.43f, 0.5f, 0.47f);
+            if (marker == null) marker = GetComponent<SpriteRenderer>();
+            if (marker != null) marker.color = BaseColor;
         }
     }
 }
