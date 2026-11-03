@@ -43,10 +43,19 @@ public static class CafeSceneAuthoring
         var game = new GameObject("Night Shift Controller").AddComponent<NightGame>();
         game.tuning = tuning; game.world = world; game.view = hud;
         var cameras = new GameObject("Cameras").transform;
-        game.mapCamera = MakeCamera("Map Camera", 12.6f, new Rect(0.01f, 0.13f, 0.775f, 0.75f), true);
+        // URP preserves pixels outside a partial viewport. Clear the full display
+        // first so closing an overlay cannot leave its last frame in those pixels.
+        var background = MakeCamera("Screen Background Camera", 5, new Rect(0, 0, 1, 1), false);
+        background.transform.SetParent(cameras);
+        background.cullingMask = 0; background.depth = -1;
+        background.allowHDR = false; background.allowMSAA = false;
+        game.mapCamera = MakeCamera("Map Camera", 5, new Rect(0.01f, 0.13f, 0.775f, 0.75f), true);
         game.mapCamera.transform.SetParent(cameras);
+        game.mapCamera.transform.position = new Vector3(world.Player.transform.position.x, world.Player.transform.position.y, -30);
+        game.mapCamera.gameObject.AddComponent<PlayerFollowCamera>().world = world;
         game.mapCamera.cullingMask = CafeWorld.RoomMask(CafeWorld.SecuritySpawn);
         game.feedCamera = MakeCamera("CCTV Camera", 7, new Rect(0, 0, 1, 1), false);
+        game.feedCamera.depth = -2;
         game.feedCamera.transform.SetParent(cameras); game.feedCamera.enabled = false;
         game.sound = game.gameObject.AddComponent<AudioSource>(); game.sound.volume = 0.2f; game.sound.playOnAwake = false;
         EditorSceneManager.SaveScene(scene, "Assets/Scenes/InGame.unity");

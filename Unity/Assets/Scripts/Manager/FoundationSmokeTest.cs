@@ -52,6 +52,8 @@ namespace NightCafe
             game.World.Player.Teleport(new Vector2(-15, 6.5f));
             yield return new WaitForSeconds(0.1f);
             Check(game.CurrentTarget != null && game.CurrentTarget.kind == InteractionKind.Camera, "CCTV must be reachable from in front of the desk.");
+            yield return new WaitForEndOfFrame();
+            Color[] beforeCctv = CaptureBackgroundSamples();
             InputSystem.QueueStateEvent(testKeyboard, new KeyboardState(Key.Space));
             yield return new WaitForSeconds(0.1f);
             InputSystem.QueueStateEvent(testKeyboard, new KeyboardState());
@@ -64,6 +66,15 @@ namespace NightCafe
             ScreenCapture.CaptureScreenshot(OutputPath("02-cctv.png"));
             yield return new WaitForSeconds(0.3f);
             game.CloseOverlay();
+            yield return new WaitForEndOfFrame();
+            Color[] afterCctv = CaptureBackgroundSamples();
+            for (int i = 0; i < beforeCctv.Length; i++)
+            {
+                Color delta = beforeCctv[i] - afterCctv[i];
+                Check(Mathf.Max(Mathf.Abs(delta.r), Mathf.Abs(delta.g), Mathf.Abs(delta.b)) < 0.01f,
+                    "CCTV close must restore background pixel " + i + ": before=" + beforeCctv[i] + ", after=" + afterCctv[i]);
+            }
+            ScreenCapture.CaptureScreenshot(OutputPath("02-after-cctv.png"));
 
             // Walk through the actual wall collider, then open and traverse the doorway.
             game.World.Player.Teleport(new Vector2(-13, 3.4f));
@@ -138,6 +149,16 @@ namespace NightCafe
             InputSystem.RemoveDevice(testKeyboard);
             File.WriteAllText(OutputPath("player-smoke-test.txt"), failures.Count == 0 ? "PASS: FHD, two scenes, room visibility, reachable interactions, CCTV input, door collision, incident trigger, reading time, wrong ingredient, pause, failure, retry, correct recipe, cleanup, return and completion.\n" : string.Join("\n\n", failures));
             Application.Quit(failures.Count == 0 ? 0 : 1);
+        }
+
+        private static Color[] CaptureBackgroundSamples()
+        {
+            var screenshot = ScreenCapture.CaptureScreenshotAsTexture();
+            // Uncovered display margins and a vacant part of the gameplay viewport.
+            var points = new[] { new Vector2Int(8, 360), new Vector2Int(8, 540), new Vector2Int(1904, 540), new Vector2Int(100, 540) };
+            var colors = Array.ConvertAll(points, point => screenshot.GetPixel(point.x, point.y));
+            Destroy(screenshot);
+            return colors;
         }
 
         private void CheckReachability()

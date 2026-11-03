@@ -38,6 +38,7 @@ InGame
 │     └─ Complete Overlay
 ├─ Night Shift Controller             NightGame·튜닝·씬 참조
 ├─ Cameras
+│  ├─ Screen Background Camera        화면 전체 배경 초기화
 │  ├─ Map Camera
 │  └─ CCTV Camera
 └─ EventSystem                        프로젝트의 UI Input Actions 참조
@@ -50,6 +51,10 @@ InGame
 HUD의 동적 글자는 `NightGameView` 필드 이름으로 연결되어 있습니다. 오브젝트 이름을 바꾸더라도 참조는 유지됩니다. 패널은 삭제하지 않고 켜고 끄므로, 문서를 여러 번 열어도 Hierarchy가 늘어나지 않습니다. 팝업을 편집할 때는 `Overlays` 아래 해당 패널을 활성화하세요. 게임 시작 시 모두 닫힙니다.
 
 `CafeButtonStyle`의 Idle/Selected Sprite를 교체하면 메뉴·CCTV·재료 슬롯의 선택 이미지를 바꿀 수 있습니다. UI Image는 9-slice를 사용하고, 픽셀 아트는 Point 필터와 무압축으로 가져옵니다. 루트의 `CafeFont.Override Font`에서 한글 글꼴을 바꿀 수 있습니다.
+
+`Cameras/Map Camera`의 `PlayerFollowCamera`가 플레이어를 화면 중앙에 유지합니다. Camera의 Orthographic Size는 5이며, 값을 줄이면 더 확대됩니다. 기존 12.6보다 약 2.5배 확대된 상태입니다. CCTV는 별도 카메라로 기존 고정 시점을 유지합니다.
+
+`Screen Background Camera`는 오브젝트를 그리지 않고 화면 전체를 매 프레임 초기화합니다. 부분 Viewport를 사용하는 Map Camera 바깥에 CCTV나 팝업의 이전 프레임이 남는 것을 방지합니다. 렌더링 순서는 CCTV(-2) → 배경(-1) → Map(0)이며, CCTV를 닫으면 카메라를 끄고 UI 영상 텍스처 연결도 해제합니다.
 
 기존 1일차 상태·재료 판정은 `ShiftSession`, 시간·이동·레시피 설정은 `Assets/Data/DayOneTuning.asset`에 유지됩니다. 규칙서·CCTV·메모 중 시간 진행, Esc 일시정지, 오답 페널티, 재도전 시 지식 유지 규칙도 유지했습니다.
 

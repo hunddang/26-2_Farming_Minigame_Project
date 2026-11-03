@@ -54,7 +54,7 @@ namespace NightCafe
             feed = new RenderTexture(1280, 720, 16) { name = "CCTV Live Feed" };
             feedCamera.targetTexture = feed;
             feedCamera.enabled = false;
-            view.feedImage.texture = feed;
+            view.feedImage.texture = null;
             objective = view.objective; status = view.status; timer = view.timer;
             prompt = view.prompt; toast = view.toast; location = view.location; progress = view.progress;
             timerLine = view.timerLine; floodWarning = view.floodWarning;
@@ -233,10 +233,11 @@ namespace NightCafe
 
         public void CloseOverlay()
         {
+            if (feedCamera != null) feedCamera.enabled = false;
+            if (view != null && view.feedImage != null) view.feedImage.texture = null;
             if (modal != null) modal.SetActive(false);
             modal = null; overlay = Overlay.None;
             menuButtons = null;
-            if (feedCamera != null) feedCamera.enabled = false;
             Time.timeScale = 1;
         }
 
@@ -256,8 +257,9 @@ namespace NightCafe
         private void OpenCctv()
         {
             OpenOverlay(Overlay.Cctv, view.cctv);
-            feedCamera.enabled = true;
+            view.feedImage.texture = feed;
             SelectCamera(0);
+            feedCamera.enabled = true;
         }
 
         public void SelectCamera(int index)
@@ -387,6 +389,8 @@ namespace NightCafe
         private void OnDestroy()
         {
             Time.timeScale = 1;
+            if (feedCamera != null) { feedCamera.enabled = false; feedCamera.targetTexture = null; }
+            if (view != null && view.feedImage != null) view.feedImage.texture = null;
             if (feed != null) { feed.Release(); Destroy(feed); }
             if (clatter != null) Destroy(clatter);
         }
