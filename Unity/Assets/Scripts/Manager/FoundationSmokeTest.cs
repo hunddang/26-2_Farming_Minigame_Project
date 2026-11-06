@@ -36,10 +36,15 @@ namespace NightCafe
         private IEnumerator Start()
         {
             yield return new WaitForSeconds(0.6f);
+            InputSystem.settings.backgroundBehavior = InputSettings.BackgroundBehavior.IgnoreFocus;
             testKeyboard = InputSystem.AddDevice<Keyboard>();
             Check(Screen.width == 1920 && Screen.height == 1080, "Player must render at FHD.");
             Check(UnityEngine.SceneManagement.SceneManager.sceneCountInBuildSettings == 2, "Exactly two scenes must be built.");
             Check((Camera.main.cullingMask & (1 << 10)) == 0, "Security movement view must hide cafe objects.");
+            Check(!game.mapCamera.orthographic && !game.feedCamera.orthographic, "Gameplay and CCTV must use real 3D perspective cameras.");
+            Check(game.World.GetComponentsInChildren<Collider2D>(true).Length == 0, "The 3D world must not retain 2D collisions.");
+            Check(game.World.GetComponentsInChildren<MeshRenderer>(true).Length > 100, "The world must contain authored 3D assets.");
+            Check(game.World.Player.GetComponent<Rigidbody>() != null, "Player must use 3D physics.");
             int authoredObjects = game.view.GetComponentsInChildren<Transform>(true).Length;
             for (int i = 0; i < 3; i++)
             {
@@ -58,6 +63,20 @@ namespace NightCafe
             yield return new WaitForSeconds(0.1f);
             InputSystem.QueueStateEvent(testKeyboard, new KeyboardState());
             yield return new WaitForSeconds(0.5f);
+            for (int channel = 0; channel < 4; channel++)
+            {
+                game.SelectCamera(channel);
+                yield return new WaitForEndOfFrame();
+                Check(game.feedCamera.enabled && game.feedCamera.targetTexture != null && game.view.feedImage.texture == game.feedCamera.targetTexture,
+                    "Each CCTV channel must render the separate camera to the live UI texture.");
+                Check(Vector3.Distance(game.feedCamera.transform.position, game.World.CctvMounts[channel].position) < 0.001f,
+                    "CCTV must render from its physical lens, channel " + channel);
+                Check(Quaternion.Angle(game.feedCamera.transform.rotation, game.World.CctvMounts[channel].rotation) < 0.01f,
+                    "CCTV must retain its fixed mounting direction.");
+                ScreenCapture.CaptureScreenshot(OutputPath("02-cctv-channel-" + (channel + 1) + ".png"));
+                yield return new WaitForSeconds(0.12f);
+            }
+            game.SelectCamera(0);
             Vector3 initial = game.World.Player.transform.position;
             InputSystem.QueueStateEvent(testKeyboard, new KeyboardState(Key.D));
             yield return new WaitForSeconds(0.2f);
@@ -66,6 +85,7 @@ namespace NightCafe
             ScreenCapture.CaptureScreenshot(OutputPath("02-cctv.png"));
             yield return new WaitForSeconds(0.3f);
             game.CloseOverlay();
+            Check(!game.feedCamera.enabled && game.view.feedImage.texture == null, "Closing CCTV must stop remote observation.");
             yield return new WaitForEndOfFrame();
             Color[] afterCctv = CaptureBackgroundSamples();
             for (int i = 0; i < beforeCctv.Length; i++)
@@ -80,7 +100,7 @@ namespace NightCafe
             game.World.Player.Teleport(new Vector2(-13, 3.4f));
             InputSystem.QueueStateEvent(testKeyboard, new KeyboardState(Key.S));
             yield return new WaitForSeconds(0.6f);
-            Check(game.World.Player.transform.position.y > 2.3f, "Closed security door must block the player.");
+            Check(game.World.Player.transform.position.z > 2.3f, "Closed security door must block the player.");
             InputSystem.QueueStateEvent(testKeyboard, new KeyboardState());
             yield return null;
             var securityDoor = game.World.Interactables.Find(item => item.securityDoor);
@@ -89,12 +109,14 @@ namespace NightCafe
             yield return new WaitForSeconds(0.7f);
             InputSystem.QueueStateEvent(testKeyboard, new KeyboardState());
             yield return null;
-            Check(game.World.Player.transform.position.y < 2, "Open security door must permit passage.");
+            Check(game.World.Player.transform.position.z < 2, "Open security door must permit passage.");
 
             game.World.Player.Teleport(CafeWorld.IncidentSpawn);
             yield return null;
             Check(game.Session.Phase == ShiftPhase.Incident, "Entering cafe must start incident.");
             Check((Camera.main.cullingMask & (1 << 10)) != 0 && (Camera.main.cullingMask & (1 << 8)) == 0, "Cafe movement view must reveal cafe and hide security objects.");
+            ScreenCapture.CaptureScreenshot(OutputPath("03-cafe-3d.png"));
+            yield return new WaitForSeconds(0.2f);
             CheckReachability();
             game.Interact(Find(InteractionKind.Recipe));
             yield return new WaitForSeconds(0.2f);
@@ -147,7 +169,7 @@ namespace NightCafe
             ScreenCapture.CaptureScreenshot(OutputPath("07-complete.png"));
             yield return new WaitForSeconds(0.5f);
             InputSystem.RemoveDevice(testKeyboard);
-            File.WriteAllText(OutputPath("player-smoke-test.txt"), failures.Count == 0 ? "PASS: FHD, two scenes, room visibility, reachable interactions, CCTV input, door collision, incident trigger, reading time, wrong ingredient, pause, failure, retry, correct recipe, cleanup, return and completion.\n" : string.Join("\n\n", failures));
+            File.WriteAllText(OutputPath("player-smoke-test.txt"), failures.Count == 0 ? "PASS: 3D assets/physics, perspective follow camera, four physical CCTV viewpoints/live RenderTexture, FHD, two scenes, room visibility, reachable interactions, CCTV input, door collision, incident trigger, reading time, wrong ingredient, pause, failure, retry, correct recipe, cleanup, return and completion.\n" : string.Join("\n\n", failures));
             Application.Quit(failures.Count == 0 ? 0 : 1);
         }
 
@@ -166,7 +188,7 @@ namespace NightCafe
             // After doors open, all authored interactions must have a collision-free route
             // and a clear interaction ray. This also catches items hidden inside furniture.
             foreach (var item in game.World.Interactables) if (item.kind == InteractionKind.Door) item.SetDoor(true);
-            Physics2D.SyncTransforms();
+            Physics.SyncTransforms();
             const int columns = 77, rows = 43;
             var visited = new bool[columns, rows];
             var queue = new Queue<Vector2Int>();
@@ -186,7 +208,7 @@ namespace NightCafe
                     if (next.x < 0 || next.y < 0 || next.x >= columns || next.y >= rows || visited[next.x, next.y]) continue;
                     visited[next.x, next.y] = true;
                     bool blocked = false;
-                    foreach (var hit in Physics2D.OverlapCircleAll(origin + (Vector2)next * 0.5f, 0.33f))
+                    foreach (var hit in Physics.OverlapCapsule(CafeWorld.GroundPosition(origin + (Vector2)next * 0.5f, 0.33f), CafeWorld.GroundPosition(origin + (Vector2)next * 0.5f, 1.42f), 0.33f, ~0, QueryTriggerInteraction.Ignore))
                         if (hit.gameObject != game.World.Player.gameObject && !hit.isTrigger) { blocked = true; break; }
                     if (!blocked) queue.Enqueue(next);
                 }
@@ -196,9 +218,9 @@ namespace NightCafe
                 bool accessible = false;
                 foreach (var point in reachable)
                 {
-                    if (Vector2.Distance(point, item.transform.position) >= game.Tuning.interactionDistance) continue;
+                    if (Vector2.Distance(point, CafeWorld.PlanPosition(item.transform.position)) >= game.Tuning.interactionDistance) continue;
                     bool blocked = false;
-                    foreach (var hit in Physics2D.LinecastAll(point, item.transform.position))
+                    foreach (var hit in CafeWorld.InteractionHits(point, CafeWorld.PlanPosition(item.transform.position)))
                         if (hit.collider.gameObject != game.World.Player.gameObject && hit.collider.gameObject != item.gameObject && !hit.collider.isTrigger) { blocked = true; break; }
                     if (!blocked) { accessible = true; break; }
                 }

@@ -36,6 +36,7 @@ public static class CafeSceneAuthoring
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
         var camera = MakeCamera("Start Camera", 13, new Rect(0, 0, 1, 1), true);
         BuildStart();
+        Cafe3DConversion.ConfigureLobby();
         EditorSceneManager.SaveScene(scene, "Assets/Scenes/Lobby.unity");
         scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
         var world = BuildWorld();
@@ -51,13 +52,21 @@ public static class CafeSceneAuthoring
         background.allowHDR = false; background.allowMSAA = false;
         game.mapCamera = MakeCamera("Map Camera", 5, new Rect(0.01f, 0.13f, 0.775f, 0.75f), true);
         game.mapCamera.transform.SetParent(cameras);
-        game.mapCamera.transform.position = new Vector3(world.Player.transform.position.x, world.Player.transform.position.y, -30);
+        game.mapCamera.transform.position = world.Player.transform.position + new Vector3(0, 11, -9);
         game.mapCamera.gameObject.AddComponent<PlayerFollowCamera>().world = world;
+        game.mapCamera.orthographic = false;
+        game.mapCamera.fieldOfView = 48;
+        game.mapCamera.nearClipPlane = 0.1f;
+        game.mapCamera.transform.LookAt(world.Player.transform.position + Vector3.up * 0.55f);
         game.mapCamera.cullingMask = CafeWorld.RoomMask(CafeWorld.SecuritySpawn);
         game.feedCamera = MakeCamera("CCTV Camera", 7, new Rect(0, 0, 1, 1), false);
         game.feedCamera.depth = -2;
         game.feedCamera.transform.SetParent(cameras); game.feedCamera.enabled = false;
+        game.feedCamera.nearClipPlane = 0.08f;
+        world.ViewCctv(game.feedCamera, 0);
+        Cafe3DConversion.ConfigureFeedMaterial(hud);
         game.sound = game.gameObject.AddComponent<AudioSource>(); game.sound.volume = 0.2f; game.sound.playOnAwake = false;
+        Cafe3DConversion.ConfigureLighting();
         EditorSceneManager.SaveScene(scene, "Assets/Scenes/InGame.unity");
         EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene("Assets/Scenes/Lobby.unity", true), new EditorBuildSettingsScene("Assets/Scenes/InGame.unity", true) };
         AssetDatabase.SaveAssets();
@@ -161,82 +170,7 @@ public static class CafeSceneAuthoring
 
     private static CafeWorld BuildWorld()
     {
-        var source = new CafeWorldAuthoring(true);
-        var world = source.Root.gameObject.AddComponent<CafeWorld>();
-        world.Cup = source.Cup; world.Flood = source.Flood; world.CoffeeDrops = source.CoffeeDrops;
-        world.Player = source.Player; world.Interactables = source.Interactables;
-        world.Player.transform.SetParent(world.transform, true);
-        world.gameObject.AddComponent<CafeFont>();
-        var groups = new Dictionary<int, Transform>();
-        foreach (int layer in new[] { 0, 8, 9, 10, 11, 12 })
-        {
-            string name = layer == 0 ? "Floor Plan" : new[] { "Security Room", "Lobby", "Cafe Hall", "Storage", "Night Room" }[layer-8];
-            var group = new GameObject(name).transform; group.SetParent(world.transform, false); groups[layer] = group;
-        }
-        var renderers = world.GetComponentsInChildren<SpriteRenderer>(true);
-        foreach (var renderer in renderers)
-        {
-            string name = renderer.name;
-            string key = null;
-            if (name is "SECURITY" or "LOBBY" or "STORAGE" or "NIGHT ROOM") key = "floor-tile";
-            if (name == "CAFE") key = "floor-wood";
-            if (name == "Wall") key = "wall";
-            if (name is "Bar counter" or "Back bar") key = "counter";
-            if (name == "Security desk") key = "desk";
-            if (name == "Cafe table") key = "table";
-            if (name == "Chair") key = "chair";
-            if (name == "Storage shelf") key = "shelf";
-            if (name == "Bed") key = "bed";
-            if (name == "Plant") key = "plant";
-            if (name == "Player") key = "player-body";
-            if (name == "Head") key = "player-head";
-            var item = renderer.GetComponent<CafeInteractable>();
-            if (item != null)
-            {
-                key = item.kind switch {
-                    InteractionKind.Camera => "monitor", InteractionKind.Note => "note", InteractionKind.RuleBook => "book",
-                    InteractionKind.Recipe => "recipe", InteractionKind.Cup => "cup", InteractionKind.Door => "door",
-                    InteractionKind.Ingredient => new[] { "milk","chocolate","almond","tapioca","cream" }[(int)item.ingredient],
-                    _ => "book" };
-                if (item.kind == InteractionKind.Cup)
-                    foreach (Transform child in item.transform) child.gameObject.SetActive(false);
-                if (item.kind == InteractionKind.Door && renderer.size.y > renderer.size.x)
-                {
-                    var texture = new GameObject("Door artwork").AddComponent<SpriteRenderer>();
-                    texture.transform.SetParent(item.transform, false);
-                    texture.sprite = Sprite("door"); texture.drawMode = SpriteDrawMode.Sliced;
-                    texture.size = new Vector2(renderer.size.y, renderer.size.x);
-                    texture.transform.localRotation = Quaternion.Euler(0,0,90);
-                    texture.sortingOrder = renderer.sortingOrder;
-                    renderer.enabled = false;
-                    item.ConfigureMarker(texture);
-                    continue;
-                }
-            }
-            if (key != null)
-            {
-                var size = renderer.size;
-                renderer.sprite = Sprite(key); renderer.color = Color.white;
-                renderer.drawMode = key.StartsWith("floor-") ? SpriteDrawMode.Tiled : SpriteDrawMode.Sliced;
-                renderer.size = size;
-                if (item != null) item.ConfigureMarker(renderer);
-            }
-            if (name is "Table runner" or "Planter" or "Edge" or "Floor seam") renderer.gameObject.SetActive(false);
-        }
-        // Serialize the player and common furniture as reusable nested prefabs.
-        SavePrefab(world.Player.gameObject, "NightPlayer");
-        var table = renderers.First(r => r.name == "Cafe table");
-        SavePrefab(table.gameObject, "CafeTable");
-        foreach (Transform child in world.transform.Cast<Transform>().ToArray())
-        {
-            if (groups.ContainsValue(child) || child == world.Player.transform) continue;
-            int layer = child.gameObject.layer;
-            child.SetParent(groups[groups.ContainsKey(layer) ? layer : 0], true);
-        }
-        world.GetComponent<CafeFont>().overrideFont = AssetDatabase.LoadAssetAtPath<Font>("Assets/Art/Fonts/NanumGothic-Regular.ttf");
-        world.GetComponent<CafeFont>().Refresh();
-        SavePrefab(world.gameObject, "CafeWorld");
-        return world;
+        return CafeWorldAuthoring.Instantiate();
     }
 
     private static void ValidateScene(CafeWorld world, NightGameView view)

@@ -1,69 +1,43 @@
-# Hierarchy에서 수정하는 화면 구조
+# 3D 화면과 편집 위치
 
-## Lobby
-
-`Unity/Assets/Scenes/Lobby.unity`를 열면 `Start Camera`, `EventSystem`, `Start Screen UI`가 있습니다. `Start Screen UI`는 `Assets/Prefabs/StartScreen.prefab`의 인스턴스입니다.
-
-- `Cafe illustration`: `title-cafe.png` 배경. Image의 Source Image를 바꿀 수 있습니다.
-- 제목·설명·메뉴 버튼: RectTransform과 Text로 직접 편집합니다.
-- `Help`: 미리 만들어 둔 비활성 도움말 패널. 편집 시 활성화하면 내용을 볼 수 있습니다.
-- 루트의 `StartScreen`: 버튼 3개, 도움말, 닫기 버튼, 게임 씬 참조. 화면을 생성하지 않습니다.
+게임의 두 씬(Lobby, InGame), 방 배치, 조사 대상 위치, UI 메뉴와 1일차 진행 규칙을 유지한 3D 버전입니다. 기존 평면도의 X는 3D의 X, Y는 3D의 Z에 대응합니다. 사건의 시간·페널티·재료 순서는 기존 `DayOneTuning.asset`과 `ShiftSession`을 그대로 사용합니다.
 
 ## InGame
 
-```text
-InGame
-├─ Cafe World                         [CafeWorld.prefab]
-│  ├─ Floor Plan                      공통 바닥·벽·문·방 이름
-│  ├─ Security Room                   감시실 가구·문서·CCTV
-│  ├─ Lobby
-│  ├─ Cafe Hall                       재료·컵·커피 효과·가구
-│  ├─ Storage
-│  ├─ Night Room
-│  └─ Player                          [NightPlayer.prefab]
-│     ├─ Head
-│     └─ Flashlight Pivot
-│        └─ Flashlight
-├─ Night Shift UI                     [NightGameUI.prefab]
-│  ├─ Shift Record                    목표·상태·진행·규칙서 버튼
-│  ├─ Header                          타이머·현재 방·일시정지
-│  ├─ Inventory                       재료 아이콘·슬롯
-│  ├─ Interaction Feedback             조사 안내·메시지·범람 경고
-│  └─ Overlays
-│     ├─ Rules Overlay
-│     ├─ Reading Overlay
-│     ├─ CCTV Overlay
-│     ├─ Pause Overlay
-│     ├─ Failure Overlay
-│     └─ Complete Overlay
-├─ Night Shift Controller             NightGame·튜닝·씬 참조
-├─ Cameras
-│  ├─ Screen Background Camera        화면 전체 배경 초기화
-│  ├─ Map Camera
-│  └─ CCTV Camera
-└─ EventSystem                        프로젝트의 UI Input Actions 참조
-```
+- `Cafe World` (`Assets/Prefabs/CafeWorld.prefab`): 기존 Floor Plan / Security Room / Lobby / Cafe Hall / Storage / Night Room / Player 구조를 유지합니다. 각 사물의 하위 모델은 메시·재질로 구성됩니다.
+- `Cameras/Map Camera`: 원근 추적 카메라. 플레이어에서 `(0, 11, -9)`만큼 떨어져 바라봅니다. FOV 48도이며 북쪽이 화면 위에 오므로 기존 WASD와 방향키를 그대로 사용합니다. `PlayerFollowCamera`의 Offset, Look Height에서 조정합니다.
+- `Cameras/CCTV Camera`: 일반 카메라와 분리된 촬영용 원근 카메라. 월드의 `CCTV Mounts` 아래 네 렌즈 위치·방향 중 선택한 위치에서 촬영합니다. 1280×720 RenderTexture → 기존 RawImage로 영상이 전달됩니다. 일반 플레이어 카메라는 전환하지 않습니다.
+- `Night Shift UI`: 기존 HUD, 재료 슬롯, 문서, 규칙서, CCTV 채널, 일시정지, 실패·재도전, 완료 패널을 유지합니다.
+- `Night Shift Controller`: 기존 NightGame과 튜닝 참조. 월드 표현과 물리 질의만 3D로 바뀌었습니다.
+- `Screen Background Camera`: 기존처럼 부분 Viewport 밖을 초기화하여 CCTV를 닫은 뒤 잔상이 남지 않게 합니다.
 
-## 수정 방법
+현재 방만 사물을 표시하는 기존 규칙을 유지합니다. `CCTV Full Walls`(13번 레이어)는 CCTV에서만 높은 벽·천장과 문 위쪽을 표시합니다. 일반 시점은 낮은 벽을 보여 캐릭터·조사 대상이 가려지는 일을 줄입니다. 실제 충돌 벽은 높이를 유지하므로 낮게 보이는 벽을 통과할 수 없습니다.
 
-가구·문·재료는 월드 프리팹에서 이동하거나 SpriteRenderer의 Sprite를 바꿉니다. 가구와 벽의 충돌 범위는 BoxCollider2D에서 따로 수정합니다. `CafeInteractable`의 종류·제목·내용·재료 종류는 Inspector에서 편집할 수 있습니다. 상호작용 대상을 추가하면 월드 루트 `CafeWorld.Interactables` 목록에도 등록합니다.
+## 직접 제작한 에셋
 
-HUD의 동적 글자는 `NightGameView` 필드 이름으로 연결되어 있습니다. 오브젝트 이름을 바꾸더라도 참조는 유지됩니다. 패널은 삭제하지 않고 켜고 끄므로, 문서를 여러 번 열어도 Hierarchy가 늘어나지 않습니다. 팝업을 편집할 때는 `Overlays` 아래 해당 패널을 활성화하세요. 게임 시작 시 모두 닫힙니다.
+`Assets/Art/NightCafe3D/Models`에 22종의 편집 가능한 프리팹이 있습니다. 테이블, 의자, 책상, 카운터, 선반, 침대, 식물, CRT 단말기, 규칙서·메모·레시피, 속이 빈 커피 컵과 손잡이, 재료 5종, 여닫이문, 근무자, CCTV 본체, 펜던트 조명, 에스프레소 머신을 포함합니다.
 
-`CafeButtonStyle`의 Idle/Selected Sprite를 교체하면 메뉴·CCTV·재료 슬롯의 선택 이미지를 바꿀 수 있습니다. UI Image는 9-slice를 사용하고, 픽셀 아트는 Point 필터와 무압축으로 가져옵니다. 루트의 `CafeFont.Override Font`에서 한글 글꼴을 바꿀 수 있습니다.
+`Materials`에는 목재·청록색 가구·도자기·금속·종이 등 공유 재질이 있습니다. 바닥은 실제 목재 판재와 타일 메시를 재질별로 합쳐 저장합니다. `Meshes`의 컵·손잡이·화분 등도 직접 작성한 형상입니다. 외부 모델 다운로드나 이미지 생성 API를 사용하지 않았습니다.
 
-`Cameras/Map Camera`의 `PlayerFollowCamera`가 플레이어를 화면 중앙에 유지합니다. Camera의 Orthographic Size는 5이며, 값을 줄이면 더 확대됩니다. 기존 12.6보다 약 2.5배 확대된 상태입니다. CCTV는 별도 카메라로 기존 고정 시점을 유지합니다.
+- 사물 이동: 기존 월드 프리팹의 상위 오브젝트 위치(X/Z)를 편집합니다.
+- 모델 편집: 각 사물의 하위 `... Model` 또는 Models 폴더의 원본 프리팹을 편집합니다.
+- 충돌 편집: 기존 BoxCollider2D 대신 BoxCollider를 사용합니다. 문과 가구의 평면 충돌 크기는 기존과 동일합니다.
+- 근무자: Rigidbody + CapsuleCollider, 실제 Spot Light 손전등. Body 아래 다리·팔의 회전으로 보행·재료 투입을 표현합니다.
+- 문: CafeInteractable의 Door Hinge 참조가 문짝을 회전시킵니다. 기존처럼 열린 문은 다시 닫히지 않습니다.
+- 커피: 3D 수면 높이와 투명도가 기존 범람 상태를 따르고, 해결 후 기존 자동 정리 시간에 맞춰 내려갑니다.
+- CCTV: `CCTV Mounts/CAM 0n/.../Lens viewpoint` 위치와 방향, CafeWorld의 Cctv Fields Of View를 조정합니다. 채널은 카페·감시실·창고·숙직실 순서입니다.
+- CCTV 화면 효과: `CCTVScreen.shader`와 `Materials/CCTV screen.mat`의 약한 색조·주사선·노이즈를 사용합니다.
 
-`Screen Background Camera`는 오브젝트를 그리지 않고 화면 전체를 매 프레임 초기화합니다. 부분 Viewport를 사용하는 Map Camera 바깥에 CCTV나 팝업의 이전 프레임이 남는 것을 방지합니다. 렌더링 순서는 CCTV(-2) → 배경(-1) → Map(0)이며, CCTV를 닫으면 카메라를 끄고 UI 영상 텍스처 연결도 해제합니다.
+## Lobby
 
-기존 1일차 상태·재료 판정은 `ShiftSession`, 시간·이동·레시피 설정은 `Assets/Data/DayOneTuning.asset`에 유지됩니다. 규칙서·CCTV·메모 중 시간 진행, Esc 일시정지, 오답 페널티, 재도전 시 지식 유지 규칙도 유지했습니다.
+기존 시작 화면의 제목·메뉴·도움말과 입력을 유지하면서, 배경 일러스트를 실제 3D 카페로 바꾸었습니다. `Cafe 3D Title Set`은 동일 월드 프리팹을 사용하며 플레이어는 비활성입니다. 게임 진행 로직은 시작하지 않습니다.
 
-## 아트 제작
+## 제작 도구와 검증
 
-`Tools/create_pixel_art.py`를 Python + Pillow로 실행하면 `Unity/Assets/Art/NightCafe`에 원본 PNG를 재현합니다. 고정 난수를 쓰는 직접 제작 픽셀 아트이며, 이미지 모델·OpenAI API·로그인 토큰을 사용하지 않습니다. 현재 세션에서는 내장 이미지 생성 도구를 사용할 수 없었고 별도 API 키도 없었습니다.
+- `Night Cafe/Convert Existing Game to 3D`: 기존 2D 씬·프리팹을 `Artifacts/3DBackups`에 백업하고 좌표·상호작용 참조를 보존해 변환합니다. 이미 변환한 월드의 수동 편집을 덮어쓰지 않습니다.
+- `Night Cafe/Validate 3D Presentation`: 레거시 2D 월드 컴포넌트 제거, 3D 모델·물리·재질·CCTV 네 위치와 기존 상태 규칙을 검사합니다.
+- `Night Cafe/Validate Day One Rules`: 기존 시간·정답/오답·실패·재도전·복귀 조건 검사.
+- `Night Cafe/Build Windows FHD`: 기존 두 씬만 Windows x64로 빌드합니다.
+- 실행 파일의 `-foundationSmokeTest -testArtifacts <절대경로>`: 실제 플레이어에서 3D 화면·충돌·네 채널 영상·상호작용 도달 가능성 및 기존 1일차 흐름을 검사하고 스크린샷을 저장합니다.
 
-이미지 모델에 전달할 미술 방향은 다음과 같습니다. 이번 PNG 제작에서는 이 프롬프트로 API를 호출하지 않았습니다.
-
-> 어두운 야간 카페의 2D 픽셀 아트. 청록색과 잿빛 목재, 오래된 종이와 은은한 호박색 조명. 비 오는 창가와 카운터 위에 떠 있는 커피 컵. 시작 화면은 왼쪽에 제목과 메뉴를 위한 여백, 오른쪽에 카페와 이상현상. 맵용 에셋은 기존 탑다운 시점의 가구·CCTV 단말기·문서·우유·초콜릿·아몬드·타피오카·크림·플레이어. 개별 스프라이트는 투명 배경, 텍스트와 워터마크 없이 제작.
-
-나눔고딕은 Google Fonts의 Nanum Gothic 배포본을 사용합니다. 원본: https://github.com/google/fonts/tree/main/ofl/nanumgothic . OFL 라이선스 파일을 함께 포함했습니다.
+`Rebuild Authored Scenes`는 저장된 3D 월드를 사용해 씬과 UI를 다시 만들며 UI 수동 편집을 초기화합니다. 일반 작업에서는 기존 씬과 프리팹을 직접 편집하세요. 나눔고딕과 기존 UI 아이콘의 라이선스·원본은 기존 Art 폴더에 유지됩니다.

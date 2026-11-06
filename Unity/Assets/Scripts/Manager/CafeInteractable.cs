@@ -12,36 +12,42 @@ namespace NightCafe
         public Ingredient ingredient;
         public bool isOpen;
         public bool securityDoor;
-        [SerializeField] private SpriteRenderer marker;
-        [SerializeField] private Color original = Color.white;
+        public Transform doorHinge;
+        private Renderer[] markers;
+        private MaterialPropertyBlock highlightProperties;
+        private float doorAngle;
         private void Awake()
         {
-            if (marker == null) marker = GetComponent<SpriteRenderer>();
-            original = marker.color;
+            markers = GetComponentsInChildren<MeshRenderer>(true);
+            highlightProperties = new MaterialPropertyBlock();
             if (kind == InteractionKind.Door) SetDoor(isOpen);
         }
-
-        public void ConfigureMarker(SpriteRenderer value)
-        {
-            marker = value;
-            original = value.color;
-        }
-
         public void Highlight(bool enabled)
         {
-            if (marker != null) marker.color = enabled ? new Color(1, 0.83f, 0.39f) : BaseColor;
+            if (markers == null) return;
+            foreach (var marker in markers)
+            {
+                if (enabled)
+                {
+                    highlightProperties.Clear();
+                    highlightProperties.SetColor("_EmissionColor", new Color(0.25f, 0.13f, 0.025f));
+                    marker.SetPropertyBlock(highlightProperties);
+                }
+                else marker.SetPropertyBlock(null);
+            }
         }
-
-        private Color BaseColor => kind == InteractionKind.Door && isOpen
-            ? new Color(original.r, original.g, original.b, 0.2f) : original;
-
         public void SetDoor(bool open)
         {
             isOpen = open;
-            var obstacle = GetComponent<BoxCollider2D>();
+            var obstacle = GetComponent<BoxCollider>();
             if (obstacle != null) obstacle.enabled = !open;
-            if (marker == null) marker = GetComponent<SpriteRenderer>();
-            if (marker != null) marker.color = BaseColor;
+            if (!Application.isPlaying && doorHinge != null) doorHinge.localRotation = Quaternion.Euler(0, open ? -95 : 0, 0);
+        }
+        private void Update()
+        {
+            if (doorHinge == null) return;
+            doorAngle = Mathf.MoveTowards(doorAngle, isOpen ? -95 : 0, Time.deltaTime * 160);
+            doorHinge.localRotation = Quaternion.Euler(0, doorAngle, 0);
         }
     }
 }

@@ -2,23 +2,20 @@ using UnityEngine;
 
 namespace NightCafe
 {
-    [DisallowMultipleComponent]
-    [RequireComponent(typeof(Camera))]
+    [DisallowMultipleComponent, RequireComponent(typeof(Camera))]
     public sealed class PlayerFollowCamera : MonoBehaviour
     {
-        [Tooltip("The scene world containing the player to keep centered.")]
         public CafeWorld world;
-
+        [Tooltip("North stays at the top of the screen, matching WASD and the existing floor plan.")]
+        public Vector3 offset = new Vector3(0, 11, -9);
+        public float lookHeight = 0.55f;
         private void OnEnable() => FollowPlayer();
-
-        // Follow the interpolated player transform after movement has updated.
         private void LateUpdate() => FollowPlayer();
-
         private void FollowPlayer()
         {
             if (world == null || world.Player == null) return;
             Vector3 player = world.Player.transform.position;
-            transform.position = new Vector3(player.x, player.y, transform.position.z);
+            transform.SetPositionAndRotation(player + offset, Quaternion.LookRotation(Vector3.up * lookHeight - offset));
         }
     }
 }

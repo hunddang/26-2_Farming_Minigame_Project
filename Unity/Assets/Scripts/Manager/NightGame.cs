@@ -79,7 +79,7 @@ namespace NightCafe
             HandleInput();
             if (!InputBlocked)
             {
-                Vector2 pos = World.Player.transform.position;
+                Vector2 pos = World.Player.PlanPosition;
                 if (pos.x > -6.5f && pos.x < 13 && Session.Phase == ShiftPhase.Surveillance)
                 {
                     Session.StartIncident();
@@ -137,13 +137,13 @@ namespace NightCafe
             if (nearest != null) nearest.Highlight(false);
             nearest = null;
             float closest = tuning.interactionDistance;
-            Vector2 player = World.Player.transform.position;
+            Vector2 player = World.Player.PlanPosition;
             foreach (var item in World.Interactables)
             {
-                float distance = Vector2.Distance(player, item.transform.position);
+                float distance = Vector2.Distance(player, CafeWorld.PlanPosition(item.transform.position));
                 if (distance >= closest) continue;
                 // Walls/counters cannot be interacted through. The target door itself is allowed.
-                var hits = Physics2D.LinecastAll(player, item.transform.position);
+                var hits = CafeWorld.InteractionHits(player, CafeWorld.PlanPosition(item.transform.position));
                 bool blocked = false;
                 foreach (var hit in hits)
                     if (hit.collider.gameObject != World.Player.gameObject && hit.collider.gameObject != item.gameObject && !hit.collider.isTrigger)
@@ -265,10 +265,7 @@ namespace NightCafe
         public void SelectCamera(int index)
         {
             cameraIndex = index;
-            Vector2 pos = CafeWorld.CameraPositions[index];
-            feedCamera.transform.position = new Vector3(pos.x, pos.y, -25);
-            feedCamera.cullingMask = CafeWorld.RoomMask(pos);
-            feedCamera.orthographicSize = index == 0 ? 7 : 5;
+            World.ViewCctv(feedCamera, index);
             feedTitle.text = "CAM 0" + (index + 1) + "  /  " + CafeWorld.CameraNames[index];
             for (int i = 0; i < cameraButtons.Length; i++) cameraButtons[i].GetComponent<CafeButtonStyle>().Select(i == index);
             if (index == 0) Session.CameraViewed = true;
@@ -318,20 +315,20 @@ namespace NightCafe
         {
             bool alive = Session.Phase == ShiftPhase.Surveillance || Session.Phase == ShiftPhase.Incident;
             World.Cup.position = World.CupOrigin + Vector3.up * (alive ? Mathf.Sin(pulseClock * 2.1f) * 0.25f : 0);
-            World.Cup.rotation = Quaternion.Euler(0, 0, alive ? pulseClock * (Session.SurgeRemaining > 0 ? 230 : 35) : 0);
+            World.Cup.rotation = Quaternion.Euler(0, alive ? pulseClock * (Session.SurgeRemaining > 0 ? 230 : 35) : 0, 0);
             for (int i = 0; i < World.CoffeeDrops.Length; i++)
             {
                 var drop = World.CoffeeDrops[i];
                 drop.gameObject.SetActive(Session.Phase == ShiftPhase.Incident);
                 float travel = Mathf.Repeat(pulseClock * (Session.SurgeRemaining > 0 ? 2 : 0.8f) + i * 0.17f, 1);
                 float angle = i * 2.4f + pulseClock;
-                drop.position = World.Cup.position + new Vector3(Mathf.Cos(angle), Mathf.Sin(angle), 0) * travel * 1.8f;
+                drop.position = World.Cup.position + new Vector3(Mathf.Cos(angle) * travel * 1.8f, -travel * 1.4f, Mathf.Sin(angle) * travel * 1.8f);
                 drop.localScale = Vector3.one * (1 - travel * 0.6f);
             }
             float flood = Session.Phase == ShiftPhase.Resolved ? Session.Flood * floodAtResolution : Session.Phase == ShiftPhase.Complete ? 0 : Session.Flood;
-            World.Flood.color = new Color(0.28f, 0.12f, 0.03f, flood * 0.72f);
+            World.SetFlood(flood);
             floodWarning.color = new Color(0.55f, 0.12f, 0.03f, Mathf.Max(0, flood - 0.65f) * (0.3f + 0.12f * Mathf.Sin(pulseClock * 4)));
-            if (alive && pulseClock >= clatterAt && ((overlay == Overlay.Cctv && cameraIndex == 0) || Vector2.Distance(World.Player.transform.position, World.Cup.position) < 10))
+            if (alive && pulseClock >= clatterAt && ((overlay == Overlay.Cctv && cameraIndex == 0) || Vector2.Distance(World.Player.PlanPosition, CafeWorld.PlanPosition(World.Cup.position)) < 10))
             {
                 sound.PlayOneShot(clatter, overlay == Overlay.Cctv ? 0.7f : 0.4f);
                 clatterAt = pulseClock + (Session.SurgeRemaining > 0 ? 0.4f : 2.2f);
@@ -350,7 +347,7 @@ namespace NightCafe
             objective.text = phase == ShiftPhase.Surveillance ? "CCTV를 확인하고\n카페를 둘러보세요." : phase == ShiftPhase.Incident ? "현장을 조사하고\n커피의 흐름을\n멈추세요." : phase == ShiftPhase.Resolved ? Session.CleanupRemaining > 0 ? "커피가 사라지고\n있습니다…" : "감시실로\n돌아가세요." : phase == ShiftPhase.Complete ? "오늘의 근무 완료" : "사건 해결 실패";
             status.text = phase == ShiftPhase.Surveillance ? "카메라 대기 중" : phase == ShiftPhase.Incident ? "범람 수위  " + Mathf.RoundToInt(Session.Flood * 100) + "%\n" + (Session.SurgeRemaining > 0 ? "커피 범람 가속 중!" : "커피가 차오르고 있습니다.") : phase == ShiftPhase.Resolved ? "현상 해소 · 자동 정리" : "근무 종료";
             progress.text = (Session.CameraViewed ? "●" : "○") + " CCTV 확인\n" + (Session.CupInspected ? "●" : "○") + " 컵 조사\n" + (Session.RecipeRead ? "●" : "○") + " 레시피 열람";
-            Vector2 pos = World.Player.transform.position;
+            Vector2 pos = World.Player.PlanPosition;
             mapCamera.cullingMask = CafeWorld.RoomMask(pos);
             location.text = pos.x < -7 ? pos.y > 2 ? "감시실" : "로비" : pos.x > 13 ? pos.y > 1 ? "창고" : "숙직실" : "카페 홀";
             for (int i = 0; i < 5; i++)
