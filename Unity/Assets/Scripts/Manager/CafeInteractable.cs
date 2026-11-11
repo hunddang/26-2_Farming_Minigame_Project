@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace NightCafe
 {
-    public enum InteractionKind { Camera, Note, RuleBook, Recipe, Cup, Ingredient, Door, Inspect }
+    public enum InteractionKind { Camera, Note, RuleBook, Recipe, Cup, Ingredient, Door, Inspect, NightTask }
 
     public sealed class CafeInteractable : MonoBehaviour
     {
@@ -10,6 +10,8 @@ namespace NightCafe
         public string title;
         [TextArea] public string description;
         public Ingredient ingredient;
+        public NightAction nightAction;
+        public int taskIndex;
         public bool isOpen;
         public bool securityDoor;
         public Transform doorHinge;

@@ -67,6 +67,7 @@ public static class CafeSceneAuthoring
         Cafe3DConversion.ConfigureFeedMaterial(hud);
         game.sound = game.gameObject.AddComponent<AudioSource>(); game.sound.volume = 0.2f; game.sound.playOnAwake = false;
         Cafe3DConversion.ConfigureLighting();
+        NightCampaignAuthoring.Attach(game);
         EditorSceneManager.SaveScene(scene, "Assets/Scenes/InGame.unity");
         EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene("Assets/Scenes/Lobby.unity", true), new EditorBuildSettingsScene("Assets/Scenes/InGame.unity", true) };
         AssetDatabase.SaveAssets();

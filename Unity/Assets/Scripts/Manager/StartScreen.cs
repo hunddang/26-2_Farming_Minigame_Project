@@ -62,6 +62,7 @@ namespace NightCafe
         {
             if (loading) return;
             loading = true;
+            NightGame.ResetCampaignEntry();
             SceneManager.LoadScene(gameScene);
         }
         public void ShowHelp() => helpPanel.SetActive(true);

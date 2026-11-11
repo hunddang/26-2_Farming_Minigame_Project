@@ -37,6 +37,8 @@ namespace NightCafe
         public const int CctvWallsLayer = 13;
         public static int RoomLayer(Vector2 position)
         {
+            if (position.x >= 37 && position.x <= 43) return 14;
+            if (position.x >= 45 && position.x <= 51) return 15;
             if (position.x < -7) return position.y > 2 ? 8 : 9;
             if (position.x > 13) return position.y > 1 ? 11 : 12;
             return 10;

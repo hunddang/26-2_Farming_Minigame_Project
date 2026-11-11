@@ -17,6 +17,13 @@ namespace NightCafe
         private bool reaching;
         public Vector2 PlanPosition => CafeWorld.PlanPosition(transform.position);
 
+        public void SnapFacingToCardinal()
+        {
+            Facing = Mathf.Abs(Facing.x) >= Mathf.Abs(Facing.y)
+                ? new Vector2(Mathf.Sign(Facing.x), 0)
+                : new Vector2(0, Mathf.Sign(Facing.y));
+        }
+
         private void Awake()
         {
             body = GetComponent<Rigidbody>();
@@ -36,8 +43,10 @@ namespace NightCafe
                 if (keys.sKey.isPressed || keys.downArrowKey.isPressed) movement.z--;
                 if (keys.aKey.isPressed || keys.leftArrowKey.isPressed) movement.x--;
                 if (keys.dKey.isPressed || keys.rightArrowKey.isPressed) movement.x++;
-                movement.Normalize();
-                if (movement.sqrMagnitude > 0) Facing = new Vector2(movement.x, movement.z);
+                Vector2 direction = new Vector2(movement.x, movement.z);
+                direction = Game.FilterDirection(direction, Facing);
+                movement = new Vector3(direction.x, 0, direction.y);
+                if (direction.sqrMagnitude > 0) Facing = direction;
                 if (keys.fKey.wasPressedThisFrame) FlashlightOn = !FlashlightOn;
                 movement *= Game.Tuning.moveSpeed * (keys.leftShiftKey.isPressed ? Game.Tuning.runMultiplier : 1);
             }
