@@ -35,16 +35,16 @@ namespace NightCafe
         }
         private IEnumerator Start()
         {
+            DontDestroyOnLoad(gameObject);
             yield return new WaitForSeconds(0.6f);
             InputSystem.settings.backgroundBehavior = InputSettings.BackgroundBehavior.IgnoreFocus;
             testKeyboard = InputSystem.AddDevice<Keyboard>();
             Check(Screen.width == 1920 && Screen.height == 1080, "Player must render at FHD.");
             Check(UnityEngine.SceneManagement.SceneManager.sceneCountInBuildSettings == 2, "Exactly two scenes must be built.");
             Check((Camera.main.cullingMask & (1 << 10)) == 0, "Security movement view must hide cafe objects.");
-            Check(!game.mapCamera.orthographic && !game.feedCamera.orthographic, "Gameplay and CCTV must use real 3D perspective cameras.");
-            Check(game.World.GetComponentsInChildren<Collider2D>(true).Length == 0, "The 3D world must not retain 2D collisions.");
-            Check(game.World.GetComponentsInChildren<MeshRenderer>(true).Length > 100, "The world must contain authored 3D assets.");
-            Check(game.World.Player.GetComponent<Rigidbody>() != null, "Player must use 3D physics.");
+            Check(game.mapCamera.orthographic && game.feedCamera.orthographic, "Gameplay and CCTV must use the original orthographic view.");
+            Check(game.World.GetComponentsInChildren<Collider>(true).Length == 0 && game.World.Player.GetComponent<Rigidbody2D>() != null,
+                "The world and player must use 2D physics.");
             int authoredObjects = game.view.GetComponentsInChildren<Transform>(true).Length;
             for (int i = 0; i < 3; i++)
             {
@@ -69,10 +69,9 @@ namespace NightCafe
                 yield return new WaitForEndOfFrame();
                 Check(game.feedCamera.enabled && game.feedCamera.targetTexture != null && game.view.feedImage.texture == game.feedCamera.targetTexture,
                     "Each CCTV channel must render the separate camera to the live UI texture.");
-                Check(Vector3.Distance(game.feedCamera.transform.position, game.World.CctvMounts[channel].position) < 0.001f,
-                    "CCTV must render from its physical lens, channel " + channel);
-                Check(Quaternion.Angle(game.feedCamera.transform.rotation, game.World.CctvMounts[channel].rotation) < 0.01f,
-                    "CCTV must retain its fixed mounting direction.");
+                Check(Vector2.Distance(game.feedCamera.transform.position, CafeWorld.CameraPositions[channel]) < 0.001f &&
+                    game.feedCamera.orthographic && game.feedCamera.cullingMask == CafeWorld.RoomMask(CafeWorld.CameraPositions[channel]),
+                    "CCTV must use the original top-down framing and room, channel " + channel);
                 ScreenCapture.CaptureScreenshot(OutputPath("02-cctv-channel-" + (channel + 1) + ".png"));
                 yield return new WaitForSeconds(0.12f);
             }
@@ -100,7 +99,7 @@ namespace NightCafe
             game.World.Player.Teleport(new Vector2(-13, 3.4f));
             InputSystem.QueueStateEvent(testKeyboard, new KeyboardState(Key.S));
             yield return new WaitForSeconds(0.6f);
-            Check(game.World.Player.transform.position.z > 2.3f, "Closed security door must block the player.");
+            Check(game.World.Player.transform.position.y > 2.3f, "Closed security door must block the player.");
             InputSystem.QueueStateEvent(testKeyboard, new KeyboardState());
             yield return null;
             var securityDoor = game.World.Interactables.Find(item => item.securityDoor);
@@ -109,13 +108,13 @@ namespace NightCafe
             yield return new WaitForSeconds(0.7f);
             InputSystem.QueueStateEvent(testKeyboard, new KeyboardState());
             yield return null;
-            Check(game.World.Player.transform.position.z < 2, "Open security door must permit passage.");
+            Check(game.World.Player.transform.position.y < 2, "Open security door must permit passage.");
 
             game.World.Player.Teleport(CafeWorld.IncidentSpawn);
             yield return null;
             Check(game.Session.Phase == ShiftPhase.Incident, "Entering cafe must start incident.");
             Check((Camera.main.cullingMask & (1 << 10)) != 0 && (Camera.main.cullingMask & (1 << 8)) == 0, "Cafe movement view must reveal cafe and hide security objects.");
-            ScreenCapture.CaptureScreenshot(OutputPath("03-cafe-3d.png"));
+            ScreenCapture.CaptureScreenshot(OutputPath("03-cafe-2d.png"));
             yield return new WaitForSeconds(0.2f);
             CheckReachability();
             game.Interact(Find(InteractionKind.Recipe));
@@ -168,9 +167,162 @@ namespace NightCafe
             Check(game.view.GetComponentsInChildren<Transform>(true).Length == authoredObjects, "All gameplay overlays must reuse the saved hierarchy.");
             ScreenCapture.CaptureScreenshot(OutputPath("07-complete.png"));
             yield return new WaitForSeconds(0.5f);
+            yield return CheckLaterShifts();
             InputSystem.RemoveDevice(testKeyboard);
-            File.WriteAllText(OutputPath("player-smoke-test.txt"), failures.Count == 0 ? "PASS: 3D assets/physics, perspective follow camera, four physical CCTV viewpoints/live RenderTexture, FHD, two scenes, room visibility, reachable interactions, CCTV input, door collision, incident trigger, reading time, wrong ingredient, pause, failure, retry, correct recipe, cleanup, return and completion.\n" : string.Join("\n\n", failures));
+            File.WriteAllText(OutputPath("player-smoke-test.txt"), failures.Count == 0 ? "PASS: Day 1 and CCTV regression checks, Day 2 menu/turning/failure/retry/cleanup, Day 3 CCTV/passages/detour/chairs/chalk, and campaign progression through the return to security.\n" : string.Join("\n\n", failures));
             Application.Quit(failures.Count == 0 ? 0 : 1);
+        }
+
+        private CafeInteractable Task(NightAction action) => game.World.Interactables.Find(item => item.nightAction == action);
+
+        private IEnumerator Tap(Key key)
+        {
+            InputSystem.QueueStateEvent(testKeyboard, new KeyboardState(key));
+            yield return null;
+            InputSystem.QueueStateEvent(testKeyboard, new KeyboardState());
+            yield return null;
+        }
+
+        private IEnumerator WaitForShift(int day)
+        {
+            var previous = game;
+            float deadline = Time.realtimeSinceStartup + 10;
+            while (Time.realtimeSinceStartup < deadline)
+            {
+                var next = FindFirstObjectByType<NightGame>();
+                if (next != null && next != previous && next.Day == day && next.Later != null)
+                {
+                    game = next;
+                    yield break;
+                }
+                yield return null;
+            }
+            Check(false, "Scene did not load night " + day);
+            game = null;
+        }
+
+        private IEnumerator CheckLaterShifts()
+        {
+            game.view.completeButtons[0].onClick.Invoke();
+            yield return WaitForShift(2);
+            if (game == null) yield break;
+            game.Interact(Find(InteractionKind.Camera));
+            game.SelectCamera(3);
+            yield return new WaitForSeconds(0.3f);
+            Check(game.Later.Viewed && game.feedCamera.enabled && game.feedCamera.orthographic && (game.feedCamera.cullingMask & (1 << 9)) != 0,
+                "Day 2 lobby must be visible on CCTV.");
+            ScreenCapture.CaptureScreenshot(OutputPath("08-menu-cctv.png"));
+            yield return null;
+            game.CloseOverlay();
+            Check(!game.feedCamera.enabled && game.view.feedImage.texture == null, "Day 2 CCTV must clear on close.");
+            game.World.Player.Teleport(new Vector2(-10.1f, -3.2f));
+            yield return new WaitForSeconds(0.2f);
+            Check(game.Later.RestrictTurning && game.CurrentTarget == Task(NightAction.Menu), "Approaching the menu must start Day 2.");
+            ScreenCapture.CaptureScreenshot(OutputPath("09-menu-incident.png"));
+            yield return null;
+            var position = game.World.Player.PlanPosition;
+            InputSystem.QueueStateEvent(testKeyboard, new KeyboardState(Key.W, Key.S));
+            yield return new WaitForSeconds(0.15f);
+            Check(game.Later.RestrictTurning && Vector2.Distance(position, game.World.Player.PlanPosition) < 0.03f,
+                "Opposing keys must cancel without causing a reversal.");
+            InputSystem.QueueStateEvent(testKeyboard, new KeyboardState());
+            yield return null;
+            Check(game.FilterDirection(Vector2.one, Vector2.right) == Vector2.right, "Diagonals must become cardinal.");
+            game.FilterDirection(Vector2.up, Vector2.down);
+            yield return new WaitForSeconds(1);
+            Check(game.view.failure.activeSelf && game.Later.FailureKind == NightFailure.Menu, "An exact reversal must fail Day 2.");
+            game.view.failureButtons[0].onClick.Invoke();
+            yield return WaitForShift(2);
+            if (game == null) yield break;
+            Check(game.Later.Phase == ShiftPhase.Surveillance && game.Later.Water == WaterState.None &&
+                CafeWorld.RoomLayer(game.World.Player.PlanPosition) == 8, "Day 2 retry must reset the night in security.");
+            CheckReachability();
+            game.World.Player.Teleport(new Vector2(-10.1f, -3.2f));
+            yield return new WaitForSeconds(0.1f);
+            var menu = Task(NightAction.Menu);
+            game.Interact(menu);
+            game.Interact(menu);
+            Check(game.Later.MenuInspected && game.Later.WipesLeft == 3, "Dry wiping must increase the work.");
+            foreach (var action in new[] { NightAction.EmptyCup, NightAction.Sink, NightAction.Warmer, NightAction.Cloth })
+                game.Interact(Task(action));
+            game.Interact(menu);
+            Check(game.Later.WetCloth && game.Later.Water == WaterState.Hot, "The sink, warmer and cloth must prepare a wet cloth.");
+            for (int i = 0; i < 3; i++) game.Interact(menu);
+            Check(game.Phase == ShiftPhase.Resolved, "Wiping the menu must resolve Day 2.");
+            game.World.Player.Teleport(CafeWorld.SecuritySpawn);
+            yield return new WaitForSeconds(0.15f);
+            Check(game.view.complete.activeSelf, "Day 2 must complete on returning to security.");
+            game.view.completeButtons[0].onClick.Invoke();
+            yield return WaitForShift(3);
+            if (game == null) yield break;
+
+            var routes = FindFirstObjectByType<NightRoutes>();
+            var content = FindFirstObjectByType<NightContent>();
+            game.Interact(Find(InteractionKind.Camera));
+            game.SelectCamera(3);
+            yield return new WaitForSeconds(0.3f);
+            Check(game.feedCamera.enabled && game.feedCamera.orthographic && game.feedCamera.cullingMask == (1 << 14), "Day 3 CCTV must show the tentacle passage.");
+            ScreenCapture.CaptureScreenshot(OutputPath("10-tentacle-cctv.png"));
+            yield return null;
+            game.CloseOverlay();
+            game.World.Player.Teleport(new Vector2(-8.3f, -4));
+            yield return new WaitForSeconds(0.15f);
+            Check(game.CurrentTarget == routes.hallDoor, "Hall passage must be reachable from the lobby.");
+            yield return Tap(Key.Space);
+            Check(CafeWorld.RoomLayer(game.World.Player.PlanPosition) == 14, "Hall door must enter the tentacle passage.");
+            game.World.Player.Teleport(new Vector2(40, 7.6f));
+            yield return new WaitForSeconds(0.15f);
+            yield return Tap(Key.Space);
+            Check(game.Phase == ShiftPhase.Incident && CafeWorld.RoomLayer(game.World.Player.PlanPosition) == 10,
+                "The far tentacle exit must lead to the hall and start Day 3.");
+            ScreenCapture.CaptureScreenshot(OutputPath("11-hall.png"));
+            yield return null;
+
+            game.World.Player.Teleport(new Vector2(-11.5f, -7.1f));
+            yield return new WaitForSeconds(0.15f);
+            yield return Tap(Key.Space);
+            Check(CafeWorld.RoomLayer(game.World.Player.PlanPosition) == 15, "Lobby shortcut must open the pursuit passage.");
+            InputSystem.QueueStateEvent(testKeyboard, new KeyboardState(Key.W, Key.LeftShift));
+            yield return new WaitForSeconds(2.2f);
+            InputSystem.QueueStateEvent(testKeyboard, new KeyboardState());
+            yield return null;
+            yield return Tap(Key.Space);
+            Check(CafeWorld.RoomLayer(game.World.Player.PlanPosition) == 10 && game.Phase == ShiftPhase.Incident,
+                "Sprinting must reach the counter exit ahead of the pursuer.");
+
+            game.Interact(routes.detourDoor);
+            float before = game.Later.Remaining;
+            yield return new WaitForSeconds(0.2f);
+            Check(game.view.reading.activeSelf && !routes.detourDoor.isOpen && game.Later.Remaining < before,
+                "The detour puzzle must block the door while the night timer keeps running.");
+            ScreenCapture.CaptureScreenshot(OutputPath("12-detour-puzzle.png"));
+            yield return null;
+            foreach (var key in new[] { Key.W, Key.W, Key.S, Key.D, Key.D, Key.W }) yield return Tap(key);
+            Check(routes.Puzzle.Solved && routes.detourDoor.isOpen && !game.view.reading.activeSelf, "Solving the detour puzzle must unlock its door.");
+            if (game.InputBlocked) game.CloseOverlay();
+
+            foreach (var seat in content.seats) game.Interact(seat.chair);
+            Check(content.seats.Length == 8 && game.Later.Warehouse && !content.seats[0].chair.enabled,
+                "All eight chairs must be placed on tables before the warehouse incident.");
+            game.World.Player.Teleport(new Vector2(15.8f, 6.15f));
+            yield return new WaitForSeconds(0.15f);
+            Check(game.CurrentTarget == Task(NightAction.Eraser), "The eraser must be reachable in the warehouse.");
+            yield return Tap(Key.Space);
+            var board = Task(NightAction.Board);
+            game.World.Player.Teleport(new Vector2(15.45f, 8.55f));
+            yield return new WaitForSeconds(0.15f);
+            Check(game.CurrentTarget == board, "The chalkboard must have a clear interaction point.");
+            float deadline = Time.time + 6;
+            while (!content.ChalkIdle && Time.time < deadline) yield return null;
+            ScreenCapture.CaptureScreenshot(OutputPath("13-warehouse.png"));
+            yield return null;
+            yield return Tap(Key.Space);
+            Check(game.Later.BoardErased && game.Phase == ShiftPhase.Incident, "The eraser must clear the board during a pause.");
+            yield return Tap(Key.Space);
+            Check(game.Phase == ShiftPhase.Resolved, "Writing the closing notice must resolve Day 3.");
+            game.World.Player.Teleport(CafeWorld.SecuritySpawn);
+            yield return new WaitForSeconds(0.15f);
+            Check(game.Phase == ShiftPhase.Complete && game.view.complete.activeSelf, "Returning to security must complete Day 3.");
         }
 
         private static Color[] CaptureBackgroundSamples()
@@ -188,7 +340,7 @@ namespace NightCafe
             // After doors open, all authored interactions must have a collision-free route
             // and a clear interaction ray. This also catches items hidden inside furniture.
             foreach (var item in game.World.Interactables) if (item.kind == InteractionKind.Door) item.SetDoor(true);
-            Physics.SyncTransforms();
+            Physics2D.SyncTransforms();
             const int columns = 77, rows = 43;
             var visited = new bool[columns, rows];
             var queue = new Queue<Vector2Int>();
@@ -208,19 +360,20 @@ namespace NightCafe
                     if (next.x < 0 || next.y < 0 || next.x >= columns || next.y >= rows || visited[next.x, next.y]) continue;
                     visited[next.x, next.y] = true;
                     bool blocked = false;
-                    foreach (var hit in Physics.OverlapCapsule(CafeWorld.GroundPosition(origin + (Vector2)next * 0.5f, 0.33f), CafeWorld.GroundPosition(origin + (Vector2)next * 0.5f, 1.42f), 0.33f, ~0, QueryTriggerInteraction.Ignore))
+                    foreach (var hit in Physics2D.OverlapCircleAll(origin + (Vector2)next * 0.5f, 0.33f))
                         if (hit.gameObject != game.World.Player.gameObject && !hit.isTrigger) { blocked = true; break; }
                     if (!blocked) queue.Enqueue(next);
                 }
             }
             foreach (var item in game.World.Interactables)
             {
+                if (!item.isActiveAndEnabled) continue;
                 bool accessible = false;
                 foreach (var point in reachable)
                 {
-                    if (Vector2.Distance(point, CafeWorld.PlanPosition(item.transform.position)) >= game.Tuning.interactionDistance) continue;
+                    if (Vector2.Distance(point, (Vector2)item.transform.position) >= game.Tuning.interactionDistance) continue;
                     bool blocked = false;
-                    foreach (var hit in CafeWorld.InteractionHits(point, CafeWorld.PlanPosition(item.transform.position)))
+                    foreach (var hit in Physics2D.LinecastAll(point, item.transform.position))
                         if (hit.collider.gameObject != game.World.Player.gameObject && hit.collider.gameObject != item.gameObject && !hit.collider.isTrigger) { blocked = true; break; }
                     if (!blocked) { accessible = true; break; }
                 }

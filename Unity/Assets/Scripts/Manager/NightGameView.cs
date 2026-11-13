@@ -13,6 +13,7 @@ namespace NightCafe
         public Image[] inventorySlots;
         public Button[] inventoryButtons;
         public Button pauseButton, rulesButton;
+        public Text nightHeader, nightTitle, completeHeader, completeTitle, failureHeader, failureTitle, failureBody;
 
         [Header("Authored overlays (inactive until opened)")]
         public GameObject rules, reading, cctv, pause, failure, complete;
@@ -42,7 +43,7 @@ namespace NightCafe
             pauseButtons[2].onClick.AddListener(NightGame.Quit);
             failureButtons[0].onClick.AddListener(game.Retry);
             failureButtons[1].onClick.AddListener(game.ReturnToLobby);
-            completeButtons[0].onClick.AddListener(game.ReturnToLobby);
+            completeButtons[0].onClick.AddListener(game.FinishShift);
             completeButtons[1].onClick.AddListener(NightGame.Quit);
             HideOverlays();
         }

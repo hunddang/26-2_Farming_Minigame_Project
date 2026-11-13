@@ -9,6 +9,8 @@ namespace NightCafe
     public sealed class GameTuning : ScriptableObject
     {
         [Min(10)] public float incidentSeconds = 180;
+        [Min(10)] public float secondNightSeconds = 300;
+        [Min(10)] public float thirdNightSeconds = 360;
         [Min(0)] public float mistakePenaltySeconds = 20;
         [Min(0)] public float surgeSeconds = 5;
         [Min(1)] public float surgeMultiplier = 2;
