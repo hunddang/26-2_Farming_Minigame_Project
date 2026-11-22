@@ -10,7 +10,7 @@ public static class NightStoryAuthoring
     {
         var content = new GameObject("Nights 04–05 Content").AddComponent<NightStoryContent>();
         game.story = content;
-        content.securityChair=Group(content.transform,"Security chair",new Vector2(-14,6.8f),8);
+        content.securityChair=Group(content.transform,"Security chair",CafeWorld.PlanPoint(8, 3.5f, 2.65f),8);
         Shape(content.securityChair,"Seat",Vector2.zero,new Vector2(0.8f,0.8f),Color.white,3,"chair");
         content.securityChair.rotation=Quaternion.Euler(0,0,180);
         var hunts = new List<CafeInteractable>();
@@ -29,7 +29,12 @@ public static class NightStoryAuthoring
         var markers=new List<Transform>();
         foreach(int room in new[]{9,10,11,12,13})
         {
-            Vector2 p=room==9 ? new Vector2(-14,-8) : room==11 ? new Vector2(21,5) : room==13 ? new Vector2(3,7) : CafeWorld.RoomCenter(room);
+            Vector2 p = room switch
+            {
+                9 => new Vector2(-14,-8), 10 => new Vector2(.6f,-8),
+                11 => new Vector2(20,5.6f), 13 => new Vector2(3,7),
+                _ => CafeWorld.RoomCenter(room)
+            };
             var item=H(StoryAction.Trap,"함정 설치 / 회수",p,"circle",room);
             item.GetComponentInChildren<SpriteRenderer>().size=new Vector2(1.8f,1.8f);
             item.GetComponentInChildren<SpriteRenderer>().color=new Color(1,0.8f,0.2f,0.7f);
@@ -56,26 +61,29 @@ public static class NightStoryAuthoring
         {
             var item=Task(final,action,name,p,art,index);finals.Add(item);return item;
         }
-        for(int i=0;i<4;i++)
+        for(int i=0;i<CafeWorld.BlackoutChannels;i++)
         {
-            Vector2 p=CafeWorld.CameraPositions[i]+new Vector2(i==1?2:0,2.3f);
+            Vector2 p = i == 2 ? CafeWorld.PlanPoint(11, 5.5f, 3.55f)
+                : CafeWorld.RoomCenter(CafeWorld.CameraRooms[i]) + new Vector2(i == 1 ? 2 : 0, 2.3f);
             var digit=F(StoryAction.DarkCameraDigit,new[]{"손님","카운터 알바생","창고 알바생","사장님"}[i]+" 카메라 아래 숫자",p,"paper",i);
             Writing(digit.transform,game.tuning.cameraPassword[DigitRank(i)].ToString(),30,CafeUi.Amber);
         }
-        F(StoryAction.Computer,"숙직실 컴퓨터",new Vector2(18,-4.8f),"monitor");
+        F(StoryAction.Computer,"숙직실 컴퓨터",CafeWorld.PlanPoint(12, 8, 2.85f),"monitor");
         F(StoryAction.Roster,"쓰레기통의 직원 근무표",new Vector2(-17,5),"note");
         F(StoryAction.Accident,"시계 아래 서랍 · 사고 기록",new Vector2(-11,7),"book");
         F(StoryAction.Identity,"자신과 닮은 형체 · 명찰 확인",new Vector2(18,-8),"player-body");
         content.identity=finals[finals.Count-1].transform;
         Shape(content.identity,"Head",new Vector2(0,0.25f),new Vector2(0.35f,0.35f),Color.white,10,"player-head");
         Shape(content.identity,"Bandaged left hand",new Vector2(-0.3f,0),new Vector2(0.18f,0.28f),CafeUi.Paper,9);
-        for(int i=0;i<3;i++) F(StoryAction.Badge,"직원 명찰 · "+(i==0?game.tuning.victimName:i==1?"이도현":"박지우"),new Vector2(17+2*i,8.5f),"staff-badge",i);
+        for(int i=0;i<3;i++) F(StoryAction.Badge,"직원 명찰 · "+(i==0?game.tuning.victimName:i==1?"이도현":"박지우"),new Vector2(17+2*i,7.55f),"staff-badge",i);
         F(StoryAction.WireCode,"촉수 표면의 잠금장치 번호",new Vector2(38,2),"note");
         F(StoryAction.Control,"냉장 설비 제어함",new Vector2(46,2),"monitor");
-        F(StoryAction.ExhaustBox,"외부 배기구를 막는 상자",new Vector2(92,1),"exhaust-crate");
-        F(StoryAction.VictimCup,"오래된 명찰이 붙은 컵",new Vector2(22,-5),"cup");
-        F(StoryAction.CupTable,"숙직실 테이블 · 컵 두기",new Vector2(18,-8),"table");
-        F(StoryAction.Exit,"카페 출입문",new Vector2(72,0),"door");
+        F(StoryAction.ExhaustBox,"외부 배기구를 막는 상자",new Vector2(93.2f,1.1f),"exhaust-crate");
+        F(StoryAction.VictimCup,"오래된 명찰이 붙은 컵",new Vector2(23,-5.95f),"cup");
+        F(StoryAction.CupTable,"숙직실 테이블 · 컵 두기",CafeWorld.PlanPoint(12, 7.6f, 5.42f),"cup");
+        var exit = F(StoryAction.Exit,"카페 출입문",new Vector2(72,0),"door").GetComponentInChildren<SpriteRenderer>();
+        exit.size = new Vector2(CafeWorld.DoorWidth, .48f);
+        exit.transform.localRotation = Quaternion.Euler(0, 0, 90);
         F(StoryAction.Departure,"문 안쪽 퇴실 확인 버튼",new Vector2(70.6f,1.6f),"monitor");
         F(StoryAction.FinalMenu,"로비 메뉴판의 마지막 문장",new Vector2(-11,-4.1f),"paper");
         content.spirit=Actor(final,"마지막 마감 근무자",new Color32(119,161,155,255),12);

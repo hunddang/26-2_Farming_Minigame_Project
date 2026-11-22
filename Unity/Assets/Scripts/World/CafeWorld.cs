@@ -38,10 +38,13 @@ namespace NightCafe
             if (cupRenderer.sprite != sprite) cupRenderer.sprite = sprite;
             return true;
         }
-        public static readonly Vector2 SecuritySpawn = new Vector2(-14, 6);
+        public static readonly Vector2 SecuritySpawn = new Vector2(-15, 6);
         public static readonly Vector2 IncidentSpawn = new Vector2(1, -8);
-        public static readonly Vector2[] CameraPositions = { new Vector2(3, -8), new Vector2(3, 10), new Vector2(20, 7), new Vector2(20, -7) };
-        public static readonly string[] CameraNames = { "카페 홀", "카운터", "창고", "숙직실" };
+        public const int PixelsPerTile = 64;
+        public const float DoorWidth = 2;
+        public const int BlackoutChannels = 4;
+        public static readonly int[] CameraRooms = { 10, 13, 11, 12, 8, 9, 16, 15, 14, 17, 18 };
+        public static int CameraChannel(int room) => System.Array.IndexOf(CameraRooms, room);
         public static readonly Vector2[] Centers = {
             new Vector2(-14,6), new Vector2(-14,-7), new Vector2(3,-8), new Vector2(20,7),
             new Vector2(20,-7), new Vector2(3,10), new Vector2(42,0), new Vector2(90,0),
@@ -55,6 +58,12 @@ namespace NightCafe
         public static readonly string[] RoomNames = { "감시실", "로비", "홀", "창고", "숙직실", "카운터", "홀 연결 복도", "카운터 연결 복도", "외부", "상부 우회로", "하부 우회로" };
         public static Vector2 RoomCenter(int layer) => Centers[Mathf.Clamp(layer-8,0,Centers.Length-1)];
         public static Rect Bounds(int layer) => new Rect(RoomCenter(layer)-Sizes[layer-8]/2, Sizes[layer-8]);
+        // Coordinates in room plans are measured from the upper-left edge in player-sized tiles.
+        public static Vector2 PlanPoint(int room, float column, float row)
+        {
+            Rect bounds = Bounds(room);
+            return new Vector2(bounds.xMin + column, bounds.yMax - row);
+        }
         public static int RoomLayer(Vector2 position)
         {
             for (int i=0;i<Centers.Length;i++)
@@ -62,7 +71,6 @@ namespace NightCafe
             return 0;
         }
         public static int RoomMask(Vector2 position) => 1 | (1 << RoomLayer(position));
-        public void ViewCctv(Camera camera, int index) => ViewRoom(camera, RoomLayer(CameraPositions[index]));
         public static void ViewRoom(Camera camera, int layer)
         {
             Vector2 position = RoomCenter(layer);

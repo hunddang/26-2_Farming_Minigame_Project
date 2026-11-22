@@ -22,7 +22,10 @@ namespace NightCafe
         private Overlay overlay;
         private GameObject modal;
         public Camera feedCamera;
+        public Camera[] roomCameras;
+        public Camera ActiveRoomCamera { get; private set; }
         public Camera mapCamera;
+        public const string DeskNote = "이상한 게 보이면 직접 확인해 주세요.\n감시실에서만 CCTV를 볼 수 있어요.\n\nWASD · 지도 클릭  카메라 선택\nSpace  조사     Shift  달리기\nF  손전등     Tab  규칙서\n1–5  소지품     Esc  닫기";
         private RenderTexture feed;
         private Text objective, status, timer, prompt, toast, location, progress;
         private Image timerLine, floodWarning;
@@ -44,7 +47,8 @@ namespace NightCafe
         private void Start()
         {
             CafeUi.ConfigureWindow();
-            if (tuning == null || world == null || view == null || mapCamera == null || feedCamera == null || sound == null)
+            if (tuning == null || world == null || view == null || mapCamera == null || feedCamera == null ||
+                roomCameras == null || roomCameras.Length != CafeWorld.CameraRooms.Length || sound == null)
             {
                 Debug.LogError("NightGame: assign tuning, world, view, cameras and sound in the scene Inspector.", this);
                 enabled = false;
@@ -130,8 +134,9 @@ namespace NightCafe
             }
             if (overlay == Overlay.Cctv)
             {
-                if (keys.aKey.wasPressedThisFrame || keys.leftArrowKey.wasPressedThisFrame || keys.wKey.wasPressedThisFrame || keys.upArrowKey.wasPressedThisFrame) SelectCamera((cameraIndex + 3) % 4);
-                if (keys.dKey.wasPressedThisFrame || keys.rightArrowKey.wasPressedThisFrame || keys.sKey.wasPressedThisFrame || keys.downArrowKey.wasPressedThisFrame) SelectCamera((cameraIndex + 1) % 4);
+                int count = roomCameras.Length;
+                if (keys.aKey.wasPressedThisFrame || keys.leftArrowKey.wasPressedThisFrame || keys.wKey.wasPressedThisFrame || keys.upArrowKey.wasPressedThisFrame) SelectCamera((cameraIndex + count - 1) % count);
+                if (keys.dKey.wasPressedThisFrame || keys.rightArrowKey.wasPressedThisFrame || keys.sKey.wasPressedThisFrame || keys.downArrowKey.wasPressedThisFrame) SelectCamera((cameraIndex + 1) % count);
                 if (keys.spaceKey.wasPressedThisFrame) CloseOverlay();
                 return;
             }
@@ -199,7 +204,7 @@ namespace NightCafe
                     else UseNightTask(item);
                     break;
                 case InteractionKind.Note:
-                    Read("사장이 남긴 메모", "오늘부터 야간 근무를 부탁해요.\n\n먼저 CCTV를 둘러보고, 이상한 게 보이면 직접 가서 확인해 주세요. 감시실 밖에서는 카메라를 볼 수 없어요.\n\nWASD / 방향키   이동 · CCTV 카메라 전환\nSpace   조사 / 상호작용\nTab   규칙서 열기 / 닫기\nShift   달리기     F   손전등\n1–5   소지품 선택 / 선택 해제\nEsc   뒤로 / 일시정지\n\n규칙서는 책상에 두었어요. 꼭 챙겨 읽어 주세요."); break;
+                    Read("사장이 남긴 메모", DeskNote + "\n\n규칙서는 책상에 두었어요. 꼭 챙겨 읽어 주세요."); break;
                 case InteractionKind.RuleBook: OpenRules(); break;
                 case InteractionKind.Recipe:
                     Session.RecipeRead = true;
@@ -279,6 +284,7 @@ namespace NightCafe
                 view.readingBody.gameObject.SetActive(true);
             }
             if (feedCamera != null) feedCamera.enabled = false;
+            StopRoomCamera();
             if (view != null && view.feedImage != null) view.feedImage.texture = null;
             if (modal != null) modal.SetActive(false);
             modal = null; overlay = Overlay.None;
@@ -295,7 +301,7 @@ namespace NightCafe
                 view.readingTitle.text = "전 알바생의 노트";
                 view.readingBody.text = Day == 2
                     ? "문구가 드러난 동안 뒤를 한 번에 돌아보지 마십시오.\n방향을 바꿀 때는 옆을 먼저 보십시오.\n\n붉은 흔적은 따뜻하게 불린 뒤 닦으십시오."
-                    : "빈자리에 손님이 보이면 의자를 빼 주십시오.\n분필이 혼자 움직이더라도 칠판의 글씨를 지우지 마십시오.\n두 문장 모두 지웠다가 덧쓴 자국이 남아 있다.\n\n홀 연결 복도는 CCTV 4번으로 확인할 수 있습니다.";
+                    : "빈자리에 손님이 보이면 의자를 빼 주십시오.\n분필이 혼자 움직이더라도 칠판의 글씨를 지우지 마십시오.\n두 문장 모두 지웠다가 덧쓴 자국이 남아 있다.\n\n홀 연결 복도는 CCTV 지도에서 확인할 수 있습니다.";
                 OpenOverlay(Overlay.Rules, view.reading);
                 return;
             }
@@ -313,20 +319,34 @@ namespace NightCafe
         {
             OpenOverlay(Overlay.Cctv, view.cctv);
             view.feedImage.texture = feed;
-            SelectCamera(0);
-            feedCamera.enabled = true;
+            SelectCamera(CafeWorld.CameraChannel(8));
         }
 
         public void SelectCamera(int index)
         {
-            cameraIndex = Mathf.Clamp(index,0,3);
-            ViewShiftCamera(index);
-            feedTitle.text = "CAM 0" + (index + 1) + "  /  " + ShiftCameraName(index);
+            if (overlay != Overlay.Cctv || index < 0 || index >= roomCameras.Length) return;
+            StopRoomCamera();
+            cameraIndex = index;
+            ActiveRoomCamera = roomCameras[index];
+            ActiveRoomCamera.targetTexture = feed;
+            ActiveRoomCamera.enabled = true;
+            int room = CafeWorld.CameraRooms[index];
+            feedTitle.text = CameraHeading();
             for (int i = 0; i < cameraButtons.Length; i++) cameraButtons[i].GetComponent<CafeButtonStyle>().Select(i == index);
             if (Day >= 4) ObserveStoryCamera(index);
-            if (laterShift == null && index == 0) Session.CameraViewed = true;
-            if (laterShift != null && (Day == 2 ? index == 3 : index == (laterShift.Warehouse ? 2 : 0)))
+            if (laterShift == null && room == 10) Session.CameraViewed = true;
+            if (laterShift != null && (Day == 2 ? room == 9 : room == (laterShift.Warehouse ? 11 : 10)))
                 laterShift.Viewed = true;
+        }
+
+        private string CameraHeading() => $"CAM {cameraIndex + 1:00}  /  {CafeWorld.RoomNames[CafeWorld.CameraRooms[cameraIndex] - 8]}";
+
+        private void StopRoomCamera()
+        {
+            if (ActiveRoomCamera == null) return;
+            ActiveRoomCamera.enabled = false;
+            ActiveRoomCamera.targetTexture = null;
+            ActiveRoomCamera = null;
         }
 
         public void Pause()
@@ -493,6 +513,7 @@ namespace NightCafe
         private void OnDestroy()
         {
             Time.timeScale = 1;
+            StopRoomCamera();
             if (feedCamera != null) { feedCamera.enabled = false; feedCamera.targetTexture = null; }
             if (view != null && view.feedImage != null) view.feedImage.texture = null;
             if (feed != null) { feed.Release(); Destroy(feed); }

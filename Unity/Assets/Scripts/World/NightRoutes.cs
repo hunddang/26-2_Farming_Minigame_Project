@@ -23,14 +23,17 @@ namespace NightCafe
         public CafeInteractable hallDoor, detourDoor;
         public CafeInteractable[] entrances;
         public Portal[] portals;
-        public Transform tentacleCamera, pursuer;
+        public Transform pursuer;
         public Transform[] tentacles;
+        public SpriteRenderer[] tentacleWarnings;
         public DetourPuzzle Puzzle { get; private set; }
         public int TentacleHits { get; private set; }
         public int LastSafeRoom { get; private set; } = 9;
         private DetourPuzzle upper, lower;
         private CafeInteractable activeGate;
-        private float pursuitBegins, nextHit;
+        private float nextHit, nextPursuitStep;
+        private Vector2 pursuitWaypoint;
+        private bool chaseStarted, enteredFromLeft;
         private bool hazards;
 
         public void Activate(CafeWorld world,int day)
@@ -40,6 +43,7 @@ namespace NightCafe
             Puzzle=upper; hazards=day>=3;
             routeObjects.SetActive(true);
             foreach (var arm in tentacles) arm.gameObject.SetActive(hazards);
+            foreach (var warning in tentacleWarnings) warning.enabled = false;
             pursuer.gameObject.SetActive(false);
             world.Interactables.AddRange(entrances);
         }
@@ -47,13 +51,16 @@ namespace NightCafe
         public void PreparePuzzle(CafeInteractable item)
         {
             activeGate=item;
-            Puzzle = CafeWorld.RoomLayer(item.transform.position)==12 || CafeWorld.RoomLayer(item.transform.position)==18 ? lower : upper;
+            Puzzle = DetourRoom(portals[item.taskIndex]) == 18 ? lower : upper;
         }
         public void UnlockDetour()
         {
-            foreach(var link in portals)
-                if(link.item==activeGate) { link.item.SetDoor(true); link.paired.SetDoor(true); }
+            int room = DetourRoom(portals[activeGate.taskIndex]);
+            foreach (var link in portals)
+                if (link.puzzle && DetourRoom(link) == room) link.item.SetDoor(true);
         }
+        private static int DetourRoom(Portal portal)
+            => portal.item.gameObject.layer is 17 or 18 ? portal.item.gameObject.layer : portal.paired.gameObject.layer;
         public Vector2 Destination(CafeInteractable item) => portals[item.taskIndex].ArrivalPosition;
         public bool Enter(CafeInteractable item,NightPlayer player)
         {
@@ -66,8 +73,10 @@ namespace NightCafe
             player.Teleport(destination);
             if (to == PursuitCorridor)
             {
-                pursuer.position=destination + (destination.x<90 ? Vector2.left : Vector2.right)*0.85f;
-                pursuitBegins=Time.time+0.85f;
+                enteredFromLeft = destination.x < CafeWorld.RoomCenter(PursuitCorridor).x;
+                pursuer.position = destination + (enteredFromLeft ? Vector2.left : Vector2.right) * .85f;
+                chaseStarted = false;
+                nextPursuitStep = 0;
             }
             return true;
         }
@@ -80,8 +89,6 @@ namespace NightCafe
                 player.Teleport(link.ArrivalPosition); return;
             }
         }
-        public void ViewTentacles(Camera camera) => CafeWorld.ViewRoom(camera, TentacleCorridor);
-
         public string Tick(NightPlayer player, Action<string> fail, bool suppressAttacks = false,
             bool tentaclesReleased = false, bool smokeCleared = false, Action tentacleHit = null)
         {
@@ -90,32 +97,36 @@ namespace NightCafe
             Vector2 position=player.PlanPosition;
             int room=CafeWorld.RoomLayer(position);
             pursuer.gameObject.SetActive(!smokeCleared && room == PursuitCorridor);
-            foreach(var arm in tentacles)
+            string warningText = "";
+            for (int index = 0; index < tentacles.Length; index++)
             {
+                var arm = tentacles[index];
                 float phase=Mathf.Repeat(Time.time+arm.position.x*0.21f,4);
                 float sweep=Mathf.Clamp01((phase-1.45f)/0.35f)*Mathf.Clamp01((2.95f-phase)/0.35f);
-                arm.localRotation=Quaternion.Euler(0,0,tentaclesReleased ? -70 : -8+Mathf.Sin(phase)*8);
-                arm.localScale=new Vector3(1,tentaclesReleased ? 0.28f : Mathf.Lerp(0.2f,1.4f,sweep),1);
+                arm.localRotation=Quaternion.Euler(0,0,tentaclesReleased ? -70 : Mathf.Sin(phase)*4);
+                arm.localScale=new Vector3(1,tentaclesReleased ? 0.28f : Mathf.Lerp(0.2f,2.47f,sweep),1);
+                var warning = tentacleWarnings[index];
+                warning.enabled = !tentaclesReleased && sweep > .08f;
+                warning.color = new Color(.53f, .16f, .25f, sweep * .32f);
                 if (suppressAttacks || tentaclesReleased || room != TentacleCorridor || sweep < 0.8f ||
-                    Time.time < nextHit || !TouchesTentacle(arm, position)) continue;
+                    Time.time < nextHit || Mathf.Abs(position.x - arm.position.x) >= 1f) continue;
                 TentacleHits++; nextHit=Time.time+1.2f;
                 if(tentacleHit!=null) tentacleHit();
                 else if(TentacleHits>=3) fail("세 번째 촉수에 붙잡혔다.");
-                return $"촉수에 스쳤다. {TentacleHits}/3";
+                warningText = $"촉수에 스쳤다. {TentacleHits}/3";
             }
-            if (!pursuer.gameObject.activeSelf || suppressAttacks || Time.time < pursuitBegins) return "";
-            Vector3 target=position;
-            pursuer.position=Vector3.MoveTowards(pursuer.position,target,Time.deltaTime*5.35f);
-            if(Vector3.Distance(pursuer.position,target)<0.56f) fail("추격자에게 붙잡혔다.");
-            return "";
-        }
-
-        private static bool TouchesTentacle(Transform arm, Vector2 position)
-        {
-            Vector2 origin = arm.position;
-            Vector2 length = (Vector2)arm.TransformPoint(0, 2.85f, 0) - origin;
-            float fraction = Mathf.Clamp01(Vector2.Dot(position - origin, length) / length.sqrMagnitude);
-            return (position - (origin + length * fraction)).sqrMagnitude <= 0.48f * 0.48f;
+            if (!pursuer.gameObject.activeSelf || suppressAttacks) return warningText;
+            Rect bounds = CafeWorld.Bounds(PursuitCorridor);
+            chaseStarted |= enteredFromLeft ? position.x >= bounds.xMin + 3 : position.x <= bounds.xMax - 3;
+            if (!chaseStarted) return warningText;
+            if (Time.time >= nextPursuitStep || Vector2.Distance(pursuer.position, pursuitWaypoint) < .06f)
+            {
+                pursuitWaypoint = CafeNavigation.NextStep(pursuer.position, position, PursuitCorridor, player.gameObject);
+                nextPursuitStep = Time.time + .14f;
+            }
+            pursuer.position = Vector2.MoveTowards(pursuer.position, pursuitWaypoint, Time.deltaTime * 4.85f);
+            if (Vector2.Distance(pursuer.position, position) < .56f) fail("추격자에게 붙잡혔다.");
+            return warningText;
         }
     }
 }

@@ -68,7 +68,6 @@ namespace NightCafe
                 Fourth = new FourthShift(tuning.fourthNightSeconds);
                 scratch=MakeScratch();
                 story.hunter.gameObject.SetActive(false);
-                cameraButtons[3].GetComponentInChildren<Text>().text = "04  로비";
             }
             else
             {
@@ -136,15 +135,15 @@ namespace NightCafe
         }
         private void ObserveStoryCamera(int index)
         {
-            int room = Day == 4 && index == 3 ? 9 : CafeWorld.RoomLayer(CafeWorld.CameraPositions[index]);
+            int room = CafeWorld.CameraRooms[index];
             if (Day == 4)
             {
                 if (Fourth.Stage == HuntStage.Leak) Fourth.Observe(room);
                 else if (Fourth.Stage == HuntStage.Search && room == CafeWorld.RoomLayer(story.hunter.position))
                 { Fourth.Observe(room); Toast("낙하자는 " + CafeWorld.RoomNames[room - 8] + "에 있다. 그 구역에 머물러 있다."); }
             }
-            else if (Fifth.Frozen && index == 3) Fifth.ObserveIdentity();
-            story.feedEffect.SetActive(Day == 5 && Fifth.Stage == FinaleStage.Blackout);
+            else if (Fifth.Frozen && room == 12) Fifth.ObserveIdentity();
+            story.feedEffect.SetActive(Day == 5 && Fifth.Stage == FinaleStage.Blackout && index < CafeWorld.BlackoutChannels);
             story.feedCaption.text = "NO SIGNAL\n\n카메라 전원이 끊겼다. 해당 장소의 숫자를 직접 확인해야 한다.";
             RefreshCracks();
         }

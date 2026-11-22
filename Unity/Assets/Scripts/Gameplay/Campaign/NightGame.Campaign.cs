@@ -39,10 +39,8 @@ namespace NightCafe
             nightContent.Activate(laterShift, World);
             if (Day == 2)
             {
-                cameraButtons[3].GetComponentInChildren<Text>().text = "04  로비";
                 scratch = MakeScratch();
             }
-            else if (Routes != null) cameraButtons[3].GetComponentInChildren<Text>().text = "04  " + ShiftCameraName(3);
             nightContent.controlHelp.text = "WASD 이동 · Shift 달리기\nSpace 조사 · F 손전등" +
                 (Day == 3 ? "\nE 의자 빼 주기" : "");
             nightContent.itemHelp.text = Day == 2 ? "컵과 행주는 조사하면 챙깁니다." : "지우개를 챙긴 뒤 칠판을 조사하세요.";
@@ -110,34 +108,6 @@ namespace NightCafe
                 nightContent.PlaceChair(item.taskIndex);
             }
             if (message.Length != 0) Toast(message);
-        }
-
-        private string ShiftCameraName(int index)
-        {
-            if (index == 3)
-            {
-                if (Day == 2) return "로비";
-                if (Day == 3) return CafeWorld.RoomNames[NightRoutes.TentacleCorridor - 8];
-                if (Day == 4) return "로비";
-            }
-            return CafeWorld.CameraNames[index];
-        }
-
-        private void ViewShiftCamera(int index)
-        {
-            if (index == 3 && Day == 3 && Routes != null)
-            {
-                Routes.ViewTentacles(feedCamera);
-                return;
-            }
-            if ((Day != 2 && Day != 4) || index != 3)
-            {
-                World.ViewCctv(feedCamera, index);
-                return;
-            }
-            feedCamera.transform.SetPositionAndRotation(nightContent.lobbyCctv.position, nightContent.lobbyCctv.rotation);
-            feedCamera.orthographicSize = 5.5f;
-            feedCamera.cullingMask = CafeWorld.RoomMask(nightContent.lobbyCctv.position);
         }
 
         private bool TryRoute(CafeInteractable item)

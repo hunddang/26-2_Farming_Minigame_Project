@@ -225,6 +225,11 @@ pixel_prop('capture-net', ('.osssso.','oslslsl.','oslsslo.','oslslsl.','oslsslo.
 pixel_prop('anchor-pin', ('..oslo..','.os..lo.','.os..lo.','..oslo..','...lo...','...so...','...so...','...oo...'))
 pixel_prop('exhaust-crate', ('oooooooo','oBBBBBbo','obwBBbBo','oBwBbBbo','oBBBbBBo','oBBbBBbo','obbbbbbo','oooooooo'))
 pixel_prop('staff-badge', ('..oss...','..olso..','.oooooo.','olwwwwso','olsswwso','olwwssso','olssssso','.oooooo.'))
+pixel_prop('parked-car', (
+    '....oooooooooo....', '..ossssssssssso...', '.olsssBBBBsssbbo..', 'olssBBbbbbBBsssso.',
+    'olssBbssssbBsssso.', 'olssBbssssbBsssso.', 'olssBBbbbbBBsssso.', '.olsssBBBBsssRbo..',
+    '..ossssssssssso...', '....oooooooooo....',
+))
 
 im, d = canvas(8, 8)
 d.line((0, 0, 7, 0), fill='white')

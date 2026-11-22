@@ -171,7 +171,7 @@ namespace NightCafe
                 int index=0;
                 foreach(Transform drop in story.leak.transform)
                     drop.localPosition=new Vector2(Mathf.Sin(index)*0.4f,1.5f-Mathf.Repeat(pulseClock*1.6f+index++*0.3f,1.5f));
-                if(Time.time>=clatterAt && (overlay==Overlay.Cctv && cameraIndex==3 || Vector2.Distance(World.Player.PlanPosition,story.leak.transform.position)<9))
+                if(Time.time>=clatterAt && (overlay==Overlay.Cctv && CafeWorld.CameraRooms[cameraIndex]==9 || Vector2.Distance(World.Player.PlanPosition,story.leak.transform.position)<9))
                 { sound.PlayOneShot(scratch,0.35f);sound.PlayOneShot(clatter,0.15f);clatterAt=Time.time+2.5f; }
             }
             story.Find(StoryAction.Extinguisher).gameObject.SetActive(Fourth.Stage == HuntStage.FirstChase && !Fourth.HasExtinguisher);

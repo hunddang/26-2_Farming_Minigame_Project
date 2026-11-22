@@ -130,7 +130,7 @@ namespace NightCafe
             story.smoke.SetActive(Fifth.Frozen && !Fifth.SmokeCleared);
             story.spirit.gameObject.SetActive(Fifth.Stage == FinaleStage.Escort || Fifth.Stage == FinaleStage.Happy);
             story.wallClock.text = Fifth.Frozen ? FinaleClock() : System.DateTime.Now.ToString("HH:mm:ss");
-            if (Fifth.Frozen) feedTitle.text="CAM 0"+(cameraIndex+1)+"  /  "+ShiftCameraName(cameraIndex)+"  /  "+FinaleClock();
+            if (Fifth.Frozen) feedTitle.text = CameraHeading() + "  /  " + FinaleClock();
             RefreshCracks();
         }
         private string FinaleClock()

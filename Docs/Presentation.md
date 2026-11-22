@@ -11,10 +11,25 @@ Unity 메뉴에서 `Night Cafe → 편집 도구`를 열면 씬, 프리팹, 설�
 | 문 위치와 도착점 | `InGame → Passages & Doors → Rooms and Passageways → Doors by Room / Arrivals by Room` |
 | 지름길 복도 | 같은 `Rooms and Passageways` 아래의 `홀 연결 복도`와 `카운터 연결 복도`에서 벽과 안내판을 편집합니다. `Corridor Hazards`에는 복도 이벤트 오브젝트가 있습니다. |
 | 화면과 팝업 | `NightGameUI.prefab`의 `Header`, `Shift Record`, `Inventory`, `Interaction Feedback`, `Overlays`. 5일차 조사 및 엔딩 패널은 `InGame → Night Shift UI → Night 05 UI`에 있습니다. |
-| CCTV 영상과 줄무늬 | `Night Shift UI → Overlays → CCTV Overlay`에서 영상 UI를 편집합니다. 채널별 기본 구도는 `CafeWorld.ViewCctv`와 `NightGame.Campaign.ViewShiftCamera`에서 정합니다. |
+| CCTV 영상과 평면도 | `Night Shift UI → Overlays → CCTV Overlay`의 `Camera Map`과 `Desk Post-it`을 편집합니다. 채널별 위치와 줌은 `InGame → Cameras → Live Room Cameras` 아래 각 Camera의 Inspector에서 수정합니다. |
 | 시간·이동 속도·레시피·암호 | `Assets/Data/DayOneTuning.asset` |
 
 문은 출발하는 방 아래에 있고, 도착 마커는 도착하는 방 아래에 있습니다. 도착점을 움직이면 `NightRoutes`가 해당 마커의 월드 좌표를 사용합니다. 문과 가구를 옮길 때는 도착점이 벽이나 가구에 닿지 않는지 확인하세요. 새로 배치한 상호작용 소품은 해당 밤의 컴포넌트나 `CafeWorld.Interactables`에 등록해야 합니다.
+
+전체 기획서 3.3.4의 개별 도면 표제와 전체 연결도를 기준으로 사용합니다. 월드 1유닛은 주인공 한 칸인 64×64px입니다. 1920×1080 기본 게임 화면에서도 이동 화면 한 칸을 64px로 표시합니다. 문 너비는 기본 2칸입니다. 일부 개별 도면의 격자 외곽 표기와 4일차 문서의 32px 잠정 규격은 별도 안입니다.
+
+| 구역 | 타일 | 설계 픽셀 |
+| --- | ---: | ---: |
+| 감시실 | 9×7 | 576×448 |
+| 로비 | 13×9 | 832×576 |
+| 창고·숙직실 | 각 11×8 | 각 704×512 |
+| 카운터 | 14×9 | 896×576 |
+| 홀 | 19×11 | 1,216×704 |
+| 외부 | 17×11 | 1,088×704 |
+| 카운터 연결 복도 | 20×6 | 1,280×384 |
+| 홀 연결 복도 | 18×8 | 1,152×512 |
+| 상부 우회로 | 18×6 | 1,152×384 |
+| 하부 우회로 | 18×7 | 1,152×448 |
 
 | 스크립트 폴더 | 편집 범위 |
 | --- | --- |

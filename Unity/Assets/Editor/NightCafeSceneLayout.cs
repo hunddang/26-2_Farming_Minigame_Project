@@ -67,7 +67,7 @@ internal static class NightCafeSceneLayout
         var hazards = Group(routes.routeObjects.transform, "Corridor Hazards");
         routes.pursuer.SetParent(hazards, true);
         foreach (var tentacle in routes.tentacles) tentacle.SetParent(hazards, true);
-        routes.tentacleCamera.SetParent(Group(routes.routeObjects.transform, "CCTV Framing"), true);
+        foreach (var warning in routes.tentacleWarnings) warning.transform.SetParent(hazards, true);
 
         NameLabel(game.view.objective, "Objective");
         NameLabel(game.view.timer, "Shift Timer");

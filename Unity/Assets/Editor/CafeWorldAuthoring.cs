@@ -12,10 +12,6 @@ namespace NightCafe
         public SpriteRenderer Flood { get; private set; }
         public Transform[] CoffeeDrops { get; } = new Transform[8];
         public NightPlayer Player { get; private set; }
-        public static readonly Vector2 SecuritySpawn = new Vector2(-14, 6);
-        public static readonly Vector2 IncidentSpawn = CafeWorld.IncidentSpawn;
-        public static readonly Vector2[] CameraPositions = { new Vector2(3, 2), new Vector2(-13, 6), new Vector2(16.5f, 5), new Vector2(16.5f, -5) };
-        public static readonly string[] CameraNames = { "카페 홀", "감시실", "창고", "숙직실" };
         private static readonly Color Wood = new Color32(100, 82, 66, 255);
         private static readonly Color Teal = new Color32(64, 117, 112, 255);
 
@@ -38,45 +34,66 @@ namespace NightCafe
                 Wall(center + Vector2.right*size.x/2, new Vector2(0.25f,size.y));
                 Label(CafeWorld.RoomNames[i],center + new Vector2(0,-size.y/2+0.7f),24,true);
             }
-            Furniture("Security desk", new Vector2(-14,8.4f),new Vector2(6,0.8f),Wood);
-            Item(InteractionKind.Camera,"CCTV 단말기",new Vector2(-15,7.5f),new Vector2(1.1f,0.7f),Teal);
-            Item(InteractionKind.Note,"사장의 포스트잇",new Vector2(-11.7f,7.5f),Vector2.one*0.55f,CafeUi.Amber);
-            Item(InteractionKind.RuleBook,"전 알바생의 노트",new Vector2(-17,6),new Vector2(0.7f,0.9f),CafeUi.Paper);
-            Furniture("Bar counter",new Vector2(3,9),new Vector2(9,0.7f),Wood);
-            Furniture("Back bar",new Vector2(3,13),new Vector2(10,0.8f),Wood);
-            for(int i=0;i<5;i++)
-                Item(InteractionKind.Ingredient,GameTuning.IngredientName((Ingredient)i),new Vector2(-1+2*i,11.5f),new Vector2(0.65f,0.75f),Color.white).ingredient=(Ingredient)i;
-            var microwave = Item(InteractionKind.NightTask,"전자레인지 · 우유 데우기",new Vector2(8.5f,11),new Vector2(0.9f,0.7f),Teal);
+            Vector2 At(int room, float column, float row) => CafeWorld.PlanPoint(room, column, row);
+            Furniture("Security desk", At(8, 3.5f, 1.4f), new Vector2(5, .9f), Wood);
+            Item(InteractionKind.Camera, "CCTV 단말기", At(8, 3.4f, 1.97f), new Vector2(1.05f, .71f), Teal);
+            Item(InteractionKind.Note, "사장의 포스트잇", At(8, 5.55f, 1.97f), Vector2.one * .55f, CafeUi.Amber);
+            Item(InteractionKind.RuleBook, "전 알바생의 노트", At(8, 1.6f, 1.97f), new Vector2(.7f, .8f), CafeUi.Paper);
+
+            Furniture("Lobby bench", At(9, 2, 7.1f), new Vector2(2, 1), Wood);
+            Furniture("Lobby planter", At(9, 9.5f, 4.6f), new Vector2(2, 2), new Color32(63, 77, 91, 255));
+            Plant(At(9, 9.5f, 4.6f));
+
+            Furniture("Back bar", At(13, 9, .65f), new Vector2(9.5f, 1), Wood);
+            Furniture("Bar counter", At(13, 8.4f, 4.35f), new Vector2(10.6f, 1), Wood);
+            Furniture("Sink unit", At(13, 13.4f, 2.45f), new Vector2(1, 2.8f), Teal);
+            Furniture("Register", At(13, 7.4f, 4.96f), new Vector2(1.05f, .28f), Teal);
+            for (int i = 0; i < 5; i++)
+                Item(InteractionKind.Ingredient, GameTuning.IngredientName((Ingredient)i),
+                    At(13, 4 + 1.7f * i, 2.15f), new Vector2(.65f, .75f), Color.white).ingredient = (Ingredient)i;
+            var microwave = Item(InteractionKind.NightTask, "전자레인지 · 우유 데우기",
+                At(13, 11.65f, 3.2f), new Vector2(.9f, .7f), Teal);
             microwave.nightAction = NightAction.Microwave;
-            foreach(var pos in new[] {new Vector2(-2,-5.5f),new Vector2(7,-5.5f),new Vector2(-2,-10),new Vector2(7,-10)})
+
+            foreach (float row in new[] { 2f, 5.5f, 9f })
+            foreach (float column in new[] { 5f, 9.5f, 14f })
             {
-                Furniture("Cafe table",pos,new Vector2(2.2f,1.35f),Wood);
-                Furniture("Chair",pos+Vector2.up*1.2f,new Vector2(0.8f,0.7f),Teal);
-                Furniture("Chair",pos-Vector2.up*1.2f,new Vector2(0.8f,0.7f),Teal);
+                Vector2 pos = At(10, column, row);
+                Furniture("Cafe table", pos, new Vector2(1.25f, 1.85f), Wood);
+                Furniture("Chair", pos + Vector2.left * 1.05f, new Vector2(.8f, .78f), Teal);
+                Furniture("Chair", pos + Vector2.right * 1.05f, new Vector2(.8f, .78f), Teal);
             }
-            Cup = Item(InteractionKind.Cup,"공중에 뜬 에스프레소",new Vector2(3,-6),Vector2.one*0.65f,CafeUi.Paper).transform;
-            Item(InteractionKind.Recipe,"카페모카 레시피",new Vector2(-4,-9),new Vector2(0.7f,0.9f),CafeUi.Paper);
-            Flood = Shape("Coffee flood",new Vector2(3,-8),new Vector2(19,11),new Color(0.25f,0.1f,0.03f,0),3,false,Root);
-            Flood.gameObject.layer=10;
-            for(int i=0;i<CoffeeDrops.Length;i++)
+            Cup = Item(InteractionKind.Cup, "공중에 뜬 에스프레소", At(10, 9.5f, 3.75f), Vector2.one * .65f, CafeUi.Paper).transform;
+            Item(InteractionKind.Recipe, "카페모카 레시피", At(10, 2.45f, 6.5f), new Vector2(.7f, .9f), CafeUi.Paper);
+            Flood = Shape("Coffee flood", CafeWorld.RoomCenter(10), CafeWorld.Sizes[2], new Color(.25f, .1f, .03f, 0), 3, false, Root);
+            Flood.gameObject.layer = 10;
+            for (int i = 0; i < CoffeeDrops.Length; i++)
             {
-                CoffeeDrops[i] = Shape("Coffee droplet",new Vector2(3,-6),Vector2.one*0.12f,new Color32(159,97,48,255),5,true,Root).transform;
-                CoffeeDrops[i].gameObject.layer=10; CoffeeDrops[i].gameObject.SetActive(false);
+                CoffeeDrops[i] = Shape("Coffee droplet", Cup.position, Vector2.one * .12f, new Color32(159, 97, 48, 255), 5, true, Root).transform;
+                CoffeeDrops[i].gameObject.layer = 10;
+                CoffeeDrops[i].gameObject.SetActive(false);
             }
-            Furniture("Storage shelf",new Vector2(23.5f,7),new Vector2(1.2f,4),Wood);
-            Furniture("Bed",new Vector2(22,-7),new Vector2(2.2f,3.7f),Teal);
-            Plant(new Vector2(-19,-10)); Plant(new Vector2(11,-12));
+
+            foreach (float column in new[] { 2f, 5.5f, 9f })
+                Furniture("Storage shelf", At(11, column, 2), new Vector2(2, 2), Wood);
+            Furniture("Supply crates", At(11, 2, 6), new Vector2(2, 1), Wood);
+            Furniture("Storage cabinet", At(11, 7.5f, 6), new Vector2(2, 1), Teal);
+
+            Furniture("Bed", At(12, 2.5f, 2.85f), new Vector2(2.8f, 2), Teal);
+            Furniture("Staff desk", At(12, 8, 2.2f), new Vector2(3, 1), Wood);
+            Furniture("Staff locker", At(12, 2, 6.1f), new Vector2(2, 2), Teal);
+            Furniture("Staff table", At(12, 7.6f, 6.05f), new Vector2(2, 1), Wood);
             if (withPlayer)
             {
-                var player = Shape("Player", SecuritySpawn, new Vector2(0.62f, 0.62f), CafeUi.Green, 8, true).gameObject;
-                Shape("Head", new Vector2(0, 0.16f), new Vector2(0.35f, 0.35f), CafeUi.Paper, 9, true, player.transform);
+                var player = Shape("Player", CafeWorld.SecuritySpawn, Vector2.one, CafeUi.Green, 8, true).gameObject;
+                Shape("Head", new Vector2(0, 0.16f), new Vector2(.52f, .52f), CafeUi.Paper, 9, true, player.transform);
                 player.AddComponent<Rigidbody2D>();
                 player.AddComponent<CircleCollider2D>();
                 Player = player.AddComponent<NightPlayer>();
                 Player.flashlight = Flashlight(player.transform);
                 // Collider uses world dimensions; visuals stay independently sized.
                 player.transform.localScale = Vector3.one;
-                player.GetComponent<SpriteRenderer>().size = new Vector2(0.62f, 0.62f);
+                player.GetComponent<SpriteRenderer>().size = Vector2.one;
                 player.GetComponent<SpriteRenderer>().drawMode = SpriteDrawMode.Sliced;
             }
         }

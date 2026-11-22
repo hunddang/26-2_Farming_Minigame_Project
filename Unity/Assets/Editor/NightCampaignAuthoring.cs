@@ -79,7 +79,7 @@ public static class NightCampaignAuthoring
     {
         var root = Group(content.transform, "Night 02 · Lobby menu");
         content.menuNight = root.gameObject;
-        var menu = Task(root, "로비 메뉴판", new Vector2(-11, -4.1f), 9, NightAction.Menu);
+        var menu = Task(root, "로비 메뉴판", CafeWorld.PlanPoint(9, 7.6f, 1.25f), 9, NightAction.Menu);
         Board(menu.transform, new Vector2(2.9f, 1.5f));
         content.menuBoard = menu;
         content.menuWriting = Writing(menu.transform, "…  /  …  /  …", new Color32(232, 79, 61, 255), 18);
@@ -92,16 +92,16 @@ public static class NightCampaignAuthoring
             mark.transform.localRotation = Quaternion.Euler(0, 0, -25 + i * 17 % 50);
         }
 
-        var hint = Notice(root, "메뉴판 아래 종이", new Vector2(-13.5f, -4.2f), 9,
+        var hint = Notice(root, "메뉴판 아래 종이", CafeWorld.PlanPoint(9, 7.6f, 2.15f), 9,
             "지워지지 않는 얼룩은 바로 문지르지 말고, 따뜻한 물을 묻힌 행주로 닦아야 한다.");
-        var cup = Task(root, "빈 컵", new Vector2(-1, 11), 13, NightAction.EmptyCup);
+        var cup = Task(root, "빈 컵", CafeWorld.PlanPoint(13, 5.2f, 1.6f), 13, NightAction.EmptyCup);
         AddTaskArt(cup, "cup", new Vector2(0.66f, 0.66f));
         content.cupPickup = cup.gameObject;
-        var sink = Task(root, "싱크대에서 물 받기", new Vector2(1.8f, 11), 13, NightAction.Sink);
+        var sink = Task(root, "싱크대에서 물 받기", CafeWorld.PlanPoint(13, 12.5f, 2.45f), 13, NightAction.Sink);
         Fixture(sink, "Basin", new Color32(98, 140, 145, 255));
-        var warmer = Task(root, "컵 워머", new Vector2(4.6f, 11), 13, NightAction.Warmer);
+        var warmer = Task(root, "컵 워머", CafeWorld.PlanPoint(13, 11.65f, 1.7f), 13, NightAction.Warmer);
         Fixture(warmer, "Heating plate", new Color32(216, 127, 64, 255));
-        var cloth = Task(root, "마른 행주", new Vector2(7.5f, 11), 13, NightAction.Cloth);
+        var cloth = Task(root, "마른 행주", CafeWorld.PlanPoint(13, 9.1f, 2.55f), 13, NightAction.Cloth);
         AddTaskArt(cloth, "paper", new Vector2(0.64f, 0.48f));
         content.clothPickup = cloth.gameObject;
         content.menuTasks = new[] { menu, hint, cup, sink, warmer, cloth };
@@ -131,7 +131,7 @@ public static class NightCampaignAuthoring
         var hall = world.transform.Find("Cafe Hall");
         var tables = hall.GetComponentsInChildren<Transform>().Where(t => t.name == "Cafe table").ToArray();
         var chairs = hall.GetComponentsInChildren<Transform>().Where(t => t.name == "Chair" && t.GetComponent<Collider2D>() != null).ToArray();
-        if (tables.Length != 4 || chairs.Length != 8) throw new InvalidOperationException("Expected four hall tables and eight chairs.");
+        if (tables.Length != 9 || chairs.Length != 18) throw new InvalidOperationException("The hall plan requires nine tables with two chairs each.");
         content.seats = chairs.Select((chair, i) =>
         {
             var item = chair.GetComponent<CafeInteractable>();
@@ -152,11 +152,11 @@ public static class NightCampaignAuthoring
             "바닥 청소 전 모든 의자를 뒤집어 테이블 위에 올려 주세요.\n의자가 남아 있으면 마감이 완료되지 않은 것으로 처리합니다.");
         var storageNotice = Notice(root, "창고 마감 점검표", new Vector2(16.5f, 7.5f), 11,
             "영업 종료 후 칠판에는 ‘마감 완료’를 표시해 주세요.");
-        var board = Task(root, "창고 칠판", new Vector2(18.5f, 9.4f), 11, NightAction.Board);
+        var board = Task(root, "창고 칠판", CafeWorld.PlanPoint(11, 3.95f, .48f), 11, NightAction.Board);
         content.chalkboard = board.transform;
         Board(board.transform, new Vector2(2.5f, 1.35f));
         content.chalkWriting = Writing(board.transform, "", CafeUi.Paper, 12);
-        var chalk = Task(root, "떠 있는 분필 잡기", new Vector2(20.2f, 8.7f), 11, NightAction.Chalk);
+        var chalk = Task(root, "떠 있는 분필 잡기", CafeWorld.PlanPoint(11, 3.9f, 1.5f), 11, NightAction.Chalk);
         var chalkArt = Sprite(chalk.transform, "Chalk", Vector2.zero, new Vector2(0.34f, 0.115f), CafeUi.Paper, 10);
         chalk.ConfigureMarker(chalkArt);
         content.chalk = chalkArt.transform;
@@ -170,6 +170,8 @@ public static class NightCampaignAuthoring
         content.shadow = Group(root, "Shadow");
         Shade(content.shadow, out content.shadowHead, out content.shadowEyes, false);
     }
+
+    private enum DoorSide { Left, Right, Top, Bottom }
 
     private static void CreateRoutes(NightContent content, CafeWorld world)
     {
@@ -191,48 +193,99 @@ public static class NightCampaignAuthoring
             }
             for(int x=-(int)size.x/2+2;x<size.x/2;x+=4)
                 Sprite(hall,"Guide light",new Vector2(x,-size.y/2+0.3f),new Vector2(0.6f,0.08f),CafeUi.Amber,3);
+            void Obstacle(string name, float col, float row, float width, float height, string art, Color color)
+            {
+                Vector2 position = CafeWorld.PlanPoint(layer, col + width / 2, row + height / 2) - CafeWorld.RoomCenter(layer);
+                var prop = Sprite(hall, name, position, new Vector2(width, height), color, 3, art);
+                prop.gameObject.AddComponent<BoxCollider2D>().size = prop.size;
+            }
+            var metal = new Color32(123, 141, 172, 255);
+            if (layer == NightRoutes.PursuitCorridor)
+            {
+                Obstacle("Service cabinet A", 6, 0, 2, 4, "shelf", metal);
+                Obstacle("Service cabinet B", 10, 2, 2, 4, "shelf", metal);
+                Obstacle("Service cabinet C", 14, 0, 2, 4, "shelf", metal);
+            }
+            if (layer is 17 or 18)
+                Obstacle("Equipment partition", 3, 0, 12, size.y - 2, "wall", metal);
+            if (layer == 16)
+            {
+                Obstacle("Cafe exterior wall", 1, 0, 2, 1, "wall", metal);
+                Obstacle("Cafe exterior windows", 1.2f, 4, 1.8f, 3, "monitor", metal);
+                Obstacle("Parked car A", 5, 1, 4, 2, "parked-car", Color.white);
+                Obstacle("Parked car B", 11, 1, 4, 2, "parked-car", new Color32(162, 167, 193, 255));
+                Obstacle("Flower bed A", 5, 9, 3, 1.8f, "plant", metal);
+                Obstacle("Flower bed B", 11, 9, 3, 1.8f, "plant", metal);
+            }
         }
-        CafeInteractable Portal(string title,Vector2 position,int layer)
+        (CafeInteractable item, Vector2 arrival) Portal(int layer, DoorSide side, float offset, int to, bool puzzle)
         {
-            var item=Task(root,title,position,layer,NightAction.Travel);
-            item.kind=InteractionKind.Door;
-            AddTaskArt(item,"door",new Vector2(0.9f,0.6f));
-            return item;
+            Vector2 size = CafeWorld.Sizes[layer - 8];
+            const float inset = .54f;
+            Vector2 position = side switch
+            {
+                DoorSide.Left => CafeWorld.PlanPoint(layer, inset, offset),
+                DoorSide.Right => CafeWorld.PlanPoint(layer, size.x - inset, offset),
+                DoorSide.Top => CafeWorld.PlanPoint(layer, offset, inset),
+                _ => CafeWorld.PlanPoint(layer, offset, size.y - inset)
+            };
+            Vector2 inward = side switch
+            {
+                DoorSide.Left => Vector2.right,
+                DoorSide.Right => Vector2.left,
+                DoorSide.Top => Vector2.down,
+                _ => Vector2.up
+            };
+            string title = CafeWorld.RoomNames[to - 8] + (puzzle ? " · 우회문" : " 문");
+            var item = Task(root, title, position, layer, NightAction.Travel);
+            item.kind = InteractionKind.Door;
+            AddTaskArt(item, "door", new Vector2(CafeWorld.DoorWidth, .48f));
+            if (side is DoorSide.Left or DoorSide.Right)
+                item.transform.GetChild(0).localRotation = Quaternion.Euler(0, 0, 90);
+            return (item, position + inward * .85f);
         }
-        void Connect(int from,Vector2 a,int to,Vector2 b,bool puzzle=false)
+        void Connect(int from, DoorSide sideA, float offsetA, int to, DoorSide sideB, float offsetB, bool puzzle = false)
         {
-            var left=Portal(CafeWorld.RoomNames[to-8]+(puzzle ? " · 쓰레기 처리 우회문" : " 문"),a,from);
-            var right=Portal(CafeWorld.RoomNames[from-8]+(puzzle ? " · 쓰레기 처리 우회문" : " 문"),b,to);
-            left.taskIndex=links.Count;
-            links.Add(new NightRoutes.Portal { item=left, target=b+(CafeWorld.RoomCenter(to)-b).normalized*0.85f, paired=right, puzzle=puzzle });
-            right.taskIndex=links.Count;
-            links.Add(new NightRoutes.Portal { item=right, target=a+(CafeWorld.RoomCenter(from)-a).normalized*0.85f, paired=left, puzzle=puzzle });
+            var left = Portal(from, sideA, offsetA, to, puzzle);
+            var right = Portal(to, sideB, offsetB, from, puzzle);
+            left.item.taskIndex = links.Count;
+            links.Add(new NightRoutes.Portal { item = left.item, target = right.arrival, paired = right.item, puzzle = puzzle });
+            right.item.taskIndex = links.Count;
+            links.Add(new NightRoutes.Portal { item = right.item, target = left.arrival, paired = left.item, puzzle = puzzle });
         }
-        Connect(8,new Vector2(-14,3.4f),9,new Vector2(-18,-3.4f));
-        Connect(9,new Vector2(-19,-6),11,new Vector2(16,4.4f));
-        Connect(9,new Vector2(-18,-10.4f),12,new Vector2(16,-4.2f));
-        Connect(9,new Vector2(-8.5f,-5),15,new Vector2(81.2f,0));
-        Connect(15,new Vector2(98.8f,0),13,new Vector2(-2.6f,7));
-        Connect(9,new Vector2(-8.5f,-9.5f),14,new Vector2(34.2f,0));
-        Connect(14,new Vector2(49.8f,0),10,new Vector2(-5.3f,-5));
-        Connect(11,new Vector2(24.2f,4),17,new Vector2(107.2f,0),true);
-        Connect(17,new Vector2(122.8f,0),13,new Vector2(-2.6f,12));
-        Connect(12,new Vector2(24.2f,-5),18,new Vector2(132.2f,0),true);
-        Connect(18,new Vector2(147.8f,0),10,new Vector2(-5.3f,-11.5f));
-        Connect(13,new Vector2(8.8f,6.8f),16,new Vector2(58,3));
-        Connect(10,new Vector2(11.3f,-10.5f),16,new Vector2(58,-3));
+
+        Connect(8, DoorSide.Right, 3.45f, 9, DoorSide.Left, 4.5f);
+        Connect(9, DoorSide.Top, 4.6f, 11, DoorSide.Bottom, 5f);
+        Connect(9, DoorSide.Bottom, 4.6f, 12, DoorSide.Top, 5f);
+        Connect(9, DoorSide.Right, 2.65f, 15, DoorSide.Left, 3f);
+        Connect(15, DoorSide.Right, 3f, 13, DoorSide.Bottom, 1.9f);
+        Connect(9, DoorSide.Right, 6.65f, 14, DoorSide.Left, 4f);
+        Connect(14, DoorSide.Right, 4f, 10, DoorSide.Left, 7.65f);
+        Connect(11, DoorSide.Right, 4.65f, 17, DoorSide.Left, 2f, true);
+        Connect(17, DoorSide.Right, 2f, 13, DoorSide.Left, 1.8f, true);
+        Connect(12, DoorSide.Right, 4.65f, 18, DoorSide.Left, 2f, true);
+        Connect(18, DoorSide.Right, 2f, 10, DoorSide.Left, 2.75f, true);
+        Connect(13, DoorSide.Right, 7.15f, 16, DoorSide.Left, 3f);
+        Connect(10, DoorSide.Right, 5.65f, 16, DoorSide.Left, 8.3f);
         routes.portals=links.ToArray();
         routes.entrances=links.Select(link=>link.item).ToArray();
         routes.hallDoor=links[10].item;
         routes.detourDoor=links[14].item;
-        routes.tentacles=new[]{-4f,0,4f}.Select(x=>
+        routes.tentacles = new[] { 6f, 10f, 14f }.Select(column =>
         {
-            var arm=Group(root,"Tentacle pivot",new Vector3(42+x,-2.8f,0),14);
+            var arm=Group(root,"Tentacle pivot",CafeWorld.PlanPoint(14, column, 7.6f),14);
             Sprite(arm,"Tentacle",new Vector2(0,1.3f),new Vector2(0.55f,3.1f),new Color32(105,57,81,255),5,"circle");
             for(int i=1;i<=5;i++) Sprite(arm,"Sucker",new Vector2(0.2f,i*0.47f),Vector2.one*0.18f,new Color32(192,103,103,255),6,"circle");
             return arm;
         }).ToArray();
-        routes.tentacleCamera=Group(root,"Passage CCTV framing",new Vector3(42,0,-25),14);
+        routes.tentacleWarnings = routes.tentacles.Select(arm =>
+            Sprite(root, "Tentacle sweep", new Vector2(arm.position.x, CafeWorld.RoomCenter(14).y),
+                new Vector2(2, CafeWorld.Sizes[6].y), new Color32(128, 44, 66, 95), -6)).ToArray();
+        foreach (var warning in routes.tentacleWarnings)
+        {
+            warning.gameObject.layer = 14;
+            warning.enabled = false;
+        }
         routes.pursuer=Group(root,"Pursuer",new Vector3(80.8f,0,0),15);
         Shade(routes.pursuer,out _,out _,true);
         DressShortcutCorridors(routes);

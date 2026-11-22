@@ -53,6 +53,19 @@ namespace NightCafe
             InputSystem.QueueStateEvent(keyboard,new KeyboardState(key));yield return null;yield return null;
             InputSystem.QueueStateEvent(keyboard,new KeyboardState());yield return null;yield return null;
         }
+        private IEnumerator SprintTo(float coordinate, bool horizontal)
+        {
+            float Position() => horizontal ? game.World.Player.PlanPosition.x : game.World.Player.PlanPosition.y;
+            float direction = Mathf.Sign(coordinate - Position());
+            Key key = horizontal ? direction > 0 ? Key.D : Key.A : direction > 0 ? Key.W : Key.S;
+            InputSystem.QueueStateEvent(keyboard, new KeyboardState(key, Key.LeftShift));
+            float deadline = Time.time + 3;
+            while (direction * (coordinate - Position()) > .12f && !game.InputBlocked && Time.time < deadline)
+                yield return null;
+            InputSystem.QueueStateEvent(keyboard, new KeyboardState());
+            yield return null;
+            Check(Mathf.Abs(coordinate - Position()) < .48f, "Running reaches the next clear lane around the cabinet");
+        }
         private IEnumerator Number(string value)
         {
             foreach(char digit in value) yield return Tap(digit=='0'?Key.Digit0:(Key)((int)Key.Digit1+digit-'1'));
@@ -93,10 +106,17 @@ namespace NightCafe
             game.World.Player.Teleport(new Vector2(-15,6.5f));yield return new WaitForSeconds(0.1f);
             Check(game.CurrentTarget!=null && game.CurrentTarget.kind==InteractionKind.Camera,"Security CCTV can be reached");
             yield return Tap(Key.Space);yield return new WaitForSeconds(0.1f);
-            for(int i=0;i<4;i++)
+            Check(game.ActiveRoomCamera == game.roomCameras[CafeWorld.CameraChannel(8)], "CCTV opens on the security room");
+            Check(game.view.cameraButtons.Length == 11 && game.view.cctv.GetComponentsInChildren<Transform>()
+                .Any(item => item.name == "Desk Post-it"), "All map nodes and the desk Post-it are present on the monitor");
+            for(int i=0;i<CafeWorld.CameraRooms.Length;i++)
             {
-                game.SelectCamera(i);yield return new WaitForEndOfFrame();
-                Check(game.feedCamera.enabled && game.view.feedImage.texture==game.feedCamera.targetTexture,"Real-time CCTV channel "+i);
+                game.view.cameraButtons[i].onClick.Invoke();yield return new WaitForEndOfFrame();
+                var selected = game.ActiveRoomCamera;
+                Check(selected != null && selected.enabled && selected == game.roomCameras[i] &&
+                    game.view.feedImage.texture == selected.targetTexture &&
+                    CafeWorld.RoomLayer(selected.transform.position) == CafeWorld.CameraRooms[i] &&
+                    game.roomCameras.Count(camera => camera.enabled) == 1, "Map button switches to the real room camera "+i);
             }
             var location=game.World.Player.PlanPosition;
             InputSystem.QueueStateEvent(keyboard,new KeyboardState(Key.D));yield return new WaitForSeconds(0.15f);
@@ -109,7 +129,12 @@ namespace NightCafe
             Check(cupRenderer.sprite != firstCupFrame && Array.IndexOf(game.World.CupFrames, cupRenderer.sprite) >= 0,
                 "The real CCTV renders the floating cup flipbook before the incident");
             yield return Shot("02-cafe-cctv");game.CloseOverlay();
-            Check(!game.feedCamera.enabled && game.view.feedImage.texture==null,"CCTV closes without remote observation");
+            Check(game.roomCameras.All(camera => !camera.enabled) && !game.feedCamera.enabled && game.view.feedImage.texture==null,
+                "CCTV closes without remote observation");
+            yield return null;
+            yield return Tap(Key.Space);
+            Check(game.ActiveRoomCamera == game.roomCameras[CafeWorld.CameraChannel(8)], "Reopening CCTV returns to the security room");
+            game.CloseOverlay();
             game.World.Player.Teleport(CafeWorld.IncidentSpawn);yield return null;yield return null;
             Check(game.Session.Phase==ShiftPhase.Incident,"Hall entry begins the espresso incident");
             var spillDeadline = Time.time + 2.3f;
@@ -126,7 +151,7 @@ namespace NightCafe
             game.World.Player.Teleport(new Vector2(8.5f,10.2f));yield return new WaitForSeconds(0.1f);
             game.Interact(Task(NightAction.Microwave));yield return new WaitForSeconds(game.Tuning.heatMilkSeconds+0.15f);
             Check(game.Session.MilkHeated,"Milk is heated at the microwave");
-            game.World.Player.Teleport(new Vector2(3,-7.2f));
+            game.World.Player.Teleport(new Vector2(3,-6.3f));
             game.Interact(game.World.Interactables.First(i=>i.kind==InteractionKind.Ingredient && i.ingredient==Ingredient.Chocolate));
             game.Interact(Item(InteractionKind.Cup));yield return new WaitForSeconds(0.9f);
             Check(game.Session.RecipeStep==1,"Chocolate is the first recipe ingredient");
@@ -136,7 +161,7 @@ namespace NightCafe
             game.World.Player.Teleport(CafeWorld.SecuritySpawn);yield return new WaitForSeconds(0.15f);
             Check(game.Phase==ShiftPhase.Complete,"Night one ends on return");yield return Next(2);
 
-            game.Interact(Item(InteractionKind.Camera));game.SelectCamera(3);yield return Shot("04-menu-cctv");game.CloseOverlay();
+            game.Interact(Item(InteractionKind.Camera));game.SelectCamera(CafeWorld.CameraChannel(9));yield return Shot("04-menu-cctv");game.CloseOverlay();
             game.World.Player.Teleport(new Vector2(-11,-5.6f));yield return new WaitForSeconds(0.15f);
             Check(game.Later.RestrictTurning,"Menu proximity starts the cardinal turning rule");
             location=game.World.Player.PlanPosition;
@@ -158,8 +183,8 @@ namespace NightCafe
             game.World.Player.Teleport(CafeWorld.SecuritySpawn);yield return new WaitForSeconds(0.15f);yield return Next(3);
 
             var routes=FindFirstObjectByType<NightRoutes>();var content=FindFirstObjectByType<NightContent>();
-            game.Interact(Item(InteractionKind.Camera));game.SelectCamera(3);yield return Shot("05-tentacle-cctv");game.CloseOverlay();
-            game.World.Player.Teleport(new Vector2(-8.8f,-9.5f));yield return new WaitForSeconds(0.1f);
+            game.Interact(Item(InteractionKind.Camera));game.SelectCamera(CafeWorld.CameraChannel(14));yield return Shot("05-tentacle-cctv");game.CloseOverlay();
+            game.World.Player.Teleport(routes.portals[11].ArrivalPosition);yield return new WaitForSeconds(0.1f);
             Check(game.CurrentTarget == routes.hallDoor, "The marked tentacle shortcut can be selected from the lobby");
             yield return Tap(Key.Space);
             Check(CafeWorld.RoomLayer(game.World.Player.PlanPosition)==14,"Lobby portal enters the tentacle corridor");
@@ -170,24 +195,30 @@ namespace NightCafe
             game.World.Player.Teleport(new Vector2(49,0));yield return new WaitForSeconds(0.1f);
             game.Interact(routes.portals[12].item);yield return null;yield return null;
             Check(CafeWorld.RoomLayer(game.World.Player.PlanPosition)==10 && game.Phase==ShiftPhase.Incident,"Far corridor exit starts the hall encounter");
-            game.World.Player.Teleport(new Vector2(-9,-5));yield return new WaitForSeconds(0.1f);
+            game.World.Player.Teleport(routes.portals[7].ArrivalPosition);yield return new WaitForSeconds(0.1f);
             Check(game.CurrentTarget == routes.portals[6].item, "The marked pursuit shortcut can be selected from the lobby");
             yield return Tap(Key.Space);
             Check(CafeWorld.RoomLayer(game.World.Player.PlanPosition) == 15 && routes.pursuer.gameObject.activeInHierarchy,
                 "Entering the pursuit shortcut reveals the actual pursuer");
             Vector3 pursuerStart = routes.pursuer.position;
-            InputSystem.QueueStateEvent(keyboard,new KeyboardState(Key.D,Key.LeftShift));yield return new WaitForSeconds(1.15f);
+            yield return SprintTo(84.6f, true);
+            yield return SprintTo(-2f, false);
             Check(Vector3.Distance(pursuerStart, routes.pursuer.position) > .4f, "The pursuer closes in during corridor traversal");
-            yield return new WaitForSeconds(1.55f);
-            InputSystem.QueueStateEvent(keyboard,new KeyboardState());yield return null;
-            game.Interact(routes.portals[8].item);yield return null;
+            yield return SprintTo(89.15f, true);
+            yield return SprintTo(2f, false);
+            yield return SprintTo(93.2f, true);
+            yield return SprintTo(-2f, false);
+            yield return SprintTo(98.65f, true);
+            yield return SprintTo(0, false);
+            yield return Tap(Key.Space);
             Check(CafeWorld.RoomLayer(game.World.Player.PlanPosition)==13 && game.Phase==ShiftPhase.Incident,"Sprinting crosses the pursuit corridor into the separate counter");
             game.World.Player.Teleport(new Vector2(24.2f,4.1f));game.Interact(routes.detourDoor);
             before=game.Later.Remaining;yield return new WaitForSeconds(0.15f);
             Check(game.Later.Remaining<before && content.detourGrid.activeSelf,"Detour puzzle uses the same running night timer");
             yield return Shot("06-upper-detour");
             foreach(var key in new[]{Key.W,Key.W,Key.S,Key.D,Key.D,Key.W})yield return Tap(key);
-            Check(routes.Puzzle.Solved && routes.detourDoor.isOpen,"Night three upper detour puzzle unlocks the door");
+            Check(routes.Puzzle.Solved && routes.portals.Skip(14).Take(4).All(link => link.item.isOpen),
+                "One upper detour puzzle unlocks both sides of both doors");
             if(game.InputBlocked)game.CloseOverlay();
             foreach(var seat in content.seats)game.Interact(seat.chair);
             Check(game.Later.Warehouse && game.Phase==ShiftPhase.Incident,"All chairs start the second shadow encounter");
@@ -204,7 +235,7 @@ namespace NightCafe
         {
             Check(game.Fourth!=null && game.Day==4,"Campaign advances into the fourth night");
             CheckReachability();
-            game.Interact(Item(InteractionKind.Camera));game.SelectCamera(3);yield return Shot("09-fourth-leak-cctv");game.CloseOverlay();
+            game.Interact(Item(InteractionKind.Camera));game.SelectCamera(CafeWorld.CameraChannel(9));yield return Shot("09-fourth-leak-cctv");game.CloseOverlay();
             Check(game.Fourth.LeakObserved,"Lobby CCTV marks the leak as observed");
             game.World.Player.Teleport(new Vector2(-12,-7.1f));yield return new WaitForSeconds(0.1f);yield return Ready();
             Check(game.Fourth.Stage==HuntStage.FirstChase,"Observed leak triggers the first drop only once");
@@ -216,7 +247,7 @@ namespace NightCafe
             Check(game.Fourth.NotesRead,"The same notebook opens the equipment stage");
             game.World.Player.Teleport(new Vector2(18,7));Use(StoryAction.Net);Use(StoryAction.Anchor);yield return null;
             Check(game.Fourth.HasNet && game.Fourth.HasAnchor && game.Fourth.Stage==HuntStage.Equipment,"Both required pieces are picked up in storage");
-            game.World.Player.Teleport(new Vector2(-17,-7));yield return new WaitForSeconds(0.1f);yield return Ready();
+            game.World.Player.Teleport(new Vector2(-17,-5.5f));yield return new WaitForSeconds(0.1f);yield return Ready();
             Check(game.Fourth.Stage==HuntStage.SecondChase,"The first general room after storage starts the second chase");
             InputSystem.QueueStateEvent(keyboard,new KeyboardState(Key.D,Key.LeftShift));yield return new WaitForSeconds(0.87f);
             InputSystem.QueueStateEvent(keyboard,new KeyboardState());yield return null;
@@ -224,7 +255,7 @@ namespace NightCafe
             game.World.Player.Teleport(new Vector2(3,-9));Use(StoryAction.Trap,10);yield return null;
             Check(game.Fourth.TrapRoom==10 && game.Fourth.Stage==HuntStage.Search,"A selected hall marker installs the trap");
             yield return Shot("11-fourth-trap");
-            game.World.Player.Teleport(CafeWorld.SecuritySpawn);game.Interact(Item(InteractionKind.Camera));game.SelectCamera(3);
+            game.World.Player.Teleport(CafeWorld.SecuritySpawn);game.Interact(Item(InteractionKind.Camera));game.SelectCamera(CafeWorld.CameraChannel(9));
             Check(game.Fourth.SearchRoom==9,"CCTV locates and pins the hunter in the lobby");
             yield return Shot("12-fourth-search");game.CloseOverlay();
             game.World.Player.Teleport(new Vector2(-14,-10));yield return new WaitForSeconds(0.15f);
@@ -243,8 +274,16 @@ namespace NightCafe
         private IEnumerator TestFifth()
         {
             Check(game.Fifth!=null && game.Day==5,"Campaign advances into the fifth night");
-            game.Interact(Item(InteractionKind.Camera));yield return Shot("14-fifth-blackout");
+            game.Interact(Item(InteractionKind.Camera));
+            Check(game.ActiveRoomCamera == game.roomCameras[CafeWorld.CameraChannel(8)] && !game.story.feedEffect.activeSelf,
+                "Even during the fifth-night outage, CCTV opens on the live security room");
+            game.SelectCamera(CafeWorld.CameraChannel(10));yield return Shot("14-fifth-blackout");
             Check(game.story.feedEffect.activeSelf,"Blackout is presented on the actual CCTV screen");game.CloseOverlay();
+            game.Interact(Item(InteractionKind.Camera));
+            game.view.cameraButtons[CafeWorld.CameraChannel(9)].onClick.Invoke();
+            Check(!game.story.feedEffect.activeSelf && game.ActiveRoomCamera == game.roomCameras[CafeWorld.CameraChannel(9)],
+                "The four-channel outage leaves the other room cameras live");
+            game.CloseOverlay();
             for(int i=0;i<4;i++)
             {
                 var digit=Story(StoryAction.DarkCameraDigit,i);game.World.Player.Teleport((Vector2)digit.transform.position+Vector2.down*0.7f);Use(StoryAction.DarkCameraDigit,i);

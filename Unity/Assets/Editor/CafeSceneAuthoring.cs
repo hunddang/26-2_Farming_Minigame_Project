@@ -50,16 +50,31 @@ public static class CafeSceneAuthoring
         background.transform.SetParent(cameras);
         background.cullingMask = 0; background.depth = -1;
         background.allowHDR = false; background.allowMSAA = false;
-        game.mapCamera = MakeCamera("Map Camera", 5, new Rect(0.01f, 0.13f, 0.775f, 0.75f), true);
+        var playViewport = new Rect(0.01f, 0.13f, 0.775f, 0.75f);
+        float playZoom = 1080 * playViewport.height / (2 * CafeWorld.PixelsPerTile);
+        game.mapCamera = MakeCamera("Map Camera", playZoom, playViewport, true);
         game.mapCamera.transform.SetParent(cameras);
         game.mapCamera.transform.position = new Vector3(world.Player.transform.position.x, world.Player.transform.position.y, -30);
         game.mapCamera.gameObject.AddComponent<PlayerFollowCamera>().world = world;
         game.mapCamera.cullingMask = CafeWorld.RoomMask(CafeWorld.SecuritySpawn);
-        game.feedCamera = MakeCamera("CCTV Camera", 7, new Rect(0, 0, 1, 1), false);
+        game.feedCamera = MakeCamera("Replay Camera", 7, new Rect(0, 0, 1, 1), false);
         game.feedCamera.depth = -2;
         game.feedCamera.transform.SetParent(cameras); game.feedCamera.enabled = false;
+        var monitorCameras = new GameObject("Live Room Cameras").transform;
+        monitorCameras.SetParent(cameras, false);
+        game.roomCameras = new Camera[CafeWorld.CameraRooms.Length];
+        for (int channel = 0; channel < game.roomCameras.Length; channel++)
+        {
+            int room = CafeWorld.CameraRooms[channel];
+            var roomCamera = MakeCamera($"CAM {channel + 1:00} · {CafeWorld.RoomNames[room - 8]}", 5, new Rect(0, 0, 1, 1), false);
+            roomCamera.transform.SetParent(monitorCameras, false);
+            CafeWorld.ViewRoom(roomCamera, room);
+            roomCamera.enabled = false;
+            game.roomCameras[channel] = roomCamera;
+        }
         game.sound = game.gameObject.AddComponent<AudioSource>(); game.sound.volume = 0.2f; game.sound.playOnAwake = false;
         NightCampaignAuthoring.Attach(game);
+        CafeCctvAuthoring.DrawLinks(hud, UnityEngine.Object.FindFirstObjectByType<NightRoutes>().portals);
         NightStoryAuthoring.Attach(game);
         NightCafeSceneLayout.Organize(game);
         NightCafeSceneLayout.ApplyLook(game.gameObject.scene.GetRootGameObjects());
@@ -186,11 +201,13 @@ public static class CafeSceneAuthoring
             if (name is "SECURITY" or "LOBBY" or "STORAGE" or "NIGHT ROOM" or "COUNTER") key = "floor-tile";
             if (name == "CAFE") key = "floor-wood";
             if (name == "Wall") key = "wall";
-            if (name is "Bar counter" or "Back bar") key = "counter";
-            if (name == "Security desk") key = "desk";
-            if (name == "Cafe table") key = "table";
+            if (name is "Bar counter" or "Back bar" or "Lobby bench") key = "counter";
+            if (name is "Security desk" or "Staff desk") key = "desk";
+            if (name is "Cafe table" or "Staff table") key = "table";
             if (name == "Chair") key = "chair";
-            if (name == "Storage shelf") key = "shelf";
+            if (name is "Storage shelf" or "Storage cabinet" or "Staff locker") key = "shelf";
+            if (name is "Sink unit" or "Register") key = "monitor";
+            if (name == "Supply crates") key = "exhaust-crate";
             if (name == "Bed") key = "bed";
             if (name == "Plant") key = "plant";
             if (name == "Player") key = "player-body";
@@ -267,7 +284,7 @@ public static class CafeSceneAuthoring
     {
         if (world.Player == null || world.Cup == null || world.Flood == null || world.Interactables.Count(i => i.kind == InteractionKind.Ingredient) != 5)
             throw new InvalidOperationException("World references are incomplete.");
-        if (view.inventoryButtons.Length != 5 || view.cameraButtons.Length != 4 || view.completeBody == null)
+        if (view.inventoryButtons.Length != 5 || view.cameraButtons.Length != CafeWorld.CameraRooms.Length || view.completeBody == null)
             throw new InvalidOperationException("UI references are incomplete.");
         foreach (var text in view.GetComponentsInChildren<Text>(true))
             if (text.font == null) throw new InvalidOperationException("Missing font: " + text.name);
@@ -411,22 +428,8 @@ public static class CafeSceneAuthoring
         }
         private static GameObject BuildCCTV(Transform root, NightGameView view)
         {
-            var body = Overlay(root, "CCTV", 1620, 940, out var panel);
-            view.feedTitle = CafeUiAuthoring.Label(body, "", 44, 28, 1000, 50, 30, CafeUi.Green);
-            CafeUiAuthoring.Label(body, "LIVE  ●  MIC ON", 1280, 36, 300, 42, 22, CafeUi.Amber, TextAnchor.MiddleRight);
-            var image = CafeUiAuthoring.Rect(body, "Live camera feed", 44, 104, 1280, 720).gameObject.AddComponent<RawImage>();
-            view.feedImage = image; image.raycastTarget = false;
-            view.cameraButtons = new Button[4];
-            for (int i = 0; i < 4; i++)
-            {
-                int index = i;
-                view.cameraButtons[i] = CafeUiAuthoring.Button(body, "0" + (i + 1) + "  " + CafeWorld.CameraNames[i], 1350, 120 + i * 100, 230, 76, null);
-            }
-            CafeUiAuthoring.Label(body, "내장 마이크 연결됨\n영상과 현장 소리 수신 중\n\nWASD / 방향키\n카메라 전환", 1350, 570, 235, 200, 21, CafeUi.Muted);
-            CafeUiAuthoring.Label(body, "감시실을 떠나면 카메라를 볼 수 없습니다.", 44, 864, 960, 42, 22, CafeUi.Muted);
-            CafeUiAuthoring.Button(body, "나가기  [Space / Esc]", 1170, 852, 410, 62, null);
-
-
+            var body = Overlay(root, "CCTV", 1816, 976, out var panel);
+            CafeCctvAuthoring.Build(body, view);
             panel.SetActive(false);
             return panel;
         }

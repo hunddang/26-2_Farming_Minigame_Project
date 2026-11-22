@@ -79,7 +79,7 @@ namespace NightCafe
             var chair = seat.chair.transform;
             var obstacle = chair.GetComponent<Collider2D>();
             if (obstacle != null) obstacle.enabled = false;
-            float side = chair.position.y > seat.table.position.y ? 1 : -1;
+            float side = chair.position.x > seat.table.position.x ? 1 : -1;
             chair.SetPositionAndRotation(seat.table.position + new Vector3(side * 0.48f, 0, 0),
                 Quaternion.Euler(0, 0, side > 0 ? 180 : 0));
             chair.GetComponent<SpriteRenderer>().sortingOrder = 3;
