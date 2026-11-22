@@ -235,6 +235,85 @@ public static class NightCampaignAuthoring
         routes.tentacleCamera=Group(root,"Passage CCTV framing",new Vector3(42,0,-25),14);
         routes.pursuer=Group(root,"Pursuer",new Vector3(80.8f,0,0),15);
         Shade(routes.pursuer,out _,out _,true);
+        DressShortcutCorridors(routes);
+    }
+
+    internal static void DressShortcutCorridors(NightRoutes routes)
+    {
+        var guideLight = new Color32(176, 187, 206, 255);
+        var guideMark = new Color32(89, 99, 124, 255);
+        var lightSpill = new Color(.40f, .46f, .64f, .12f);
+        foreach (int layer in new[] { NightRoutes.TentacleCorridor, NightRoutes.PursuitCorridor })
+        {
+            string roomName = CafeWorld.RoomNames[layer - 8];
+            var room = routes.routeObjects.transform.Cast<Transform>()
+                .Single(child => child.gameObject.layer == layer && child.Find("Floor") != null);
+            room.name = roomName;
+            var props = room.Find("Shortcut Signs and Lamps") ?? room.Find("Warning Signs and Lamps");
+            room.Find("Floor").GetComponent<SpriteRenderer>().color = new Color32(144, 154, 173, 255);
+            if (props != null)
+            {
+                props.name = "Shortcut Signs and Lamps";
+                foreach (var text in props.GetComponentsInChildren<Text>(true))
+                {
+                    text.text = roomName;
+                    text.fontSize = 18;
+                    text.rectTransform.anchoredPosition = new Vector2(6, 0);
+                }
+                foreach (var graphic in props.GetComponentsInChildren<SpriteRenderer>(true))
+                {
+                    if (graphic.name is "Warning Light" or "Emergency Lamp" or "Guide Lamp")
+                    {
+                        graphic.name = "Guide Lamp";
+                        graphic.color = guideLight;
+                    }
+                    else if (graphic.name is "Hazard Stripe" or "Floor Marker")
+                    {
+                        graphic.name = "Floor Marker";
+                        graphic.color = guideMark;
+                    }
+                    else if (graphic.name == "Light Spill") graphic.color = lightSpill;
+                }
+                continue;
+            }
+            props = Group(room, "Shortcut Signs and Lamps");
+            Vector2 size = CafeWorld.Bounds(layer).size;
+            foreach (int side in new[] { -1, 1 })
+            {
+                float end = side * (size.x / 2 - 1.75f);
+                var sign = Group(props, side < 0 ? "Lobby Approach" : "Far Approach",
+                    new Vector3(end, size.y / 2 - 0.72f, 0));
+                Sprite(sign, "Signboard", Vector2.zero, new Vector2(2.9f, .72f), new Color32(40, 27, 44, 255), 5);
+                Sprite(sign, "Guide Lamp", new Vector2(-1.22f, 0), new Vector2(.14f, .31f), guideLight, 6);
+                var text = Writing(sign, roomName, CafeUi.Paper, 18);
+                text.rectTransform.sizeDelta = new Vector2(145, 50);
+                text.rectTransform.anchoredPosition = new Vector2(6, 0);
+                for (int stripe = 0; stripe < 4; stripe++)
+                    Sprite(props, "Floor Marker", new Vector2(end, (stripe - 1.5f) * .58f),
+                        new Vector2(.24f, .26f), guideMark, -8);
+            }
+            for (int offset = -1; offset <= 1; offset++)
+            {
+                Vector2 mark = new Vector2(offset * 4, size.y / 2 - .27f);
+                Sprite(props, "Guide Lamp", mark, new Vector2(.58f, .12f), guideLight, 5);
+                Sprite(props, "Light Spill", mark + Vector2.down * .39f, new Vector2(1.8f, 1.1f), lightSpill, -7, "circle");
+            }
+        }
+
+        foreach (var link in routes.portals)
+        {
+            int from = link.item.gameObject.layer;
+            int destination = link.paired.gameObject.layer;
+            if (!NightRoutes.IsHazardCorridor(destination)) continue;
+            var farExit = routes.portals.First(exit =>
+                exit.item.gameObject.layer == destination && exit.paired.gameObject.layer != from);
+            string exitName = CafeWorld.RoomNames[farExit.paired.gameObject.layer - 8];
+            link.item.name = link.item.title = $"{exitName} 지름길";
+        }
+        foreach (var sprite in routes.pursuer.GetComponentsInChildren<SpriteRenderer>(true))
+        {
+            if (sprite.name != "Eye") sprite.color = new Color32(85, 40, 59, 255);
+        }
     }
 
     private static void Shade(Transform root, out Transform head, out Transform eyes, bool pursuit)

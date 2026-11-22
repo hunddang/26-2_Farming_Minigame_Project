@@ -42,7 +42,7 @@ namespace NightCafe
                 cameraButtons[3].GetComponentInChildren<Text>().text = "04  로비";
                 scratch = MakeScratch();
             }
-            else if (Routes != null) cameraButtons[3].GetComponentInChildren<Text>().text = "04  촉수 복도";
+            else if (Routes != null) cameraButtons[3].GetComponentInChildren<Text>().text = "04  " + ShiftCameraName(3);
             nightContent.controlHelp.text = "WASD 이동 · Shift 달리기\nSpace 조사 · F 손전등" +
                 (Day == 3 ? "\nE 의자 빼 주기" : "");
             nightContent.itemHelp.text = Day == 2 ? "컵과 행주는 조사하면 챙깁니다." : "지우개를 챙긴 뒤 칠판을 조사하세요.";
@@ -117,7 +117,7 @@ namespace NightCafe
             if (index == 3)
             {
                 if (Day == 2) return "로비";
-                if (Day == 3) return "촉수 복도";
+                if (Day == 3) return CafeWorld.RoomNames[NightRoutes.TentacleCorridor - 8];
                 if (Day == 4) return "로비";
             }
             return CafeWorld.CameraNames[index];
@@ -155,11 +155,12 @@ namespace NightCafe
                 return true;
             }
             if (!Routes.Enter(item, World.Player)) return false;
+            int destination = CafeWorld.RoomLayer(World.Player.PlanPosition);
             if(Day==5 && Fifth.Stage==FinaleStage.Escort)
             {
-                int destination=CafeWorld.RoomLayer(World.Player.PlanPosition);
                 story.spirit.position=InsideRoom(World.Player.PlanPosition+Vector2.left*0.8f,destination);SetLayer(story.spirit,destination);
             }
+            TryCorridorConfrontation(destination);
             if (nearest != null) nearest.Highlight(false);
             nearest = null;
             return true;

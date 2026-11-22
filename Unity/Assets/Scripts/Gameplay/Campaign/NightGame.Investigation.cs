@@ -29,7 +29,7 @@ namespace NightCafe
                     else
                     {
                         bool correct = Fifth.GiveBadge(); RefreshCracks();
-                        if (correct) StartCoroutine(Movie($"명찰에 적힌 이름은 {tuning.victimName}.\n형체가 사라지자 촉수 복도에 제어함이 드러났다. 내 얼굴은 아직 원래대로 돌아오지 않았다.", tuning.cinematicSeconds));
+                        if (correct) StartCoroutine(Movie($"명찰에 적힌 이름은 {tuning.victimName}.\n형체가 사라지자 홀 연결 복도에 제어함이 드러났다. 내 얼굴은 아직 원래대로 돌아오지 않았다.", tuning.cinematicSeconds));
                         else Toast("직원번호가 일치하지 않는다. 명찰과 근무표를 다시 확인하자.");
                     }
                     break;

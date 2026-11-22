@@ -83,9 +83,10 @@ namespace NightCafe
                 else
                 {
                     laterShift.Tick(Time.deltaTime);
-                    if (Routes != null && (Phase == ShiftPhase.Surveillance || Phase == ShiftPhase.Incident))
+                    if (Routes != null && (Phase == ShiftPhase.Surveillance || Phase == ShiftPhase.Incident || Phase == ShiftPhase.Resolved))
                     {
-                        string warning = Routes.Tick(World.Player, message => laterShift.Fail(message,NightFailure.Passage));
+                        string warning = Routes.Tick(World.Player, message => laterShift.Fail(message, NightFailure.Passage),
+                            suppressAttacks: Phase == ShiftPhase.Resolved);
                         if (warning.Length != 0) Toast(warning);
                     }
                 }
@@ -294,7 +295,7 @@ namespace NightCafe
                 view.readingTitle.text = "전 알바생의 노트";
                 view.readingBody.text = Day == 2
                     ? "문구가 드러난 동안 뒤를 한 번에 돌아보지 마십시오.\n방향을 바꿀 때는 옆을 먼저 보십시오.\n\n붉은 흔적은 따뜻하게 불린 뒤 닦으십시오."
-                    : "빈자리에 손님이 보이면 의자를 빼 주십시오.\n분필이 혼자 움직이더라도 칠판의 글씨를 지우지 마십시오.\n두 문장 모두 지웠다가 덧쓴 자국이 남아 있다.\n\n촉수의 움직임은 CCTV로 살필 수 있다. 추격 복도에서는 Shift로 달리십시오.";
+                    : "빈자리에 손님이 보이면 의자를 빼 주십시오.\n분필이 혼자 움직이더라도 칠판의 글씨를 지우지 마십시오.\n두 문장 모두 지웠다가 덧쓴 자국이 남아 있다.\n\n홀 연결 복도는 CCTV 4번으로 확인할 수 있습니다.";
                 OpenOverlay(Overlay.Rules, view.reading);
                 return;
             }

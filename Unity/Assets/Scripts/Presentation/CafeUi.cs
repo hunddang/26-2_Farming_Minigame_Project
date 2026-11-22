@@ -4,12 +4,12 @@ namespace NightCafe
 {
     public static class CafeUi
     {
-        public static readonly Color Ink = new Color32(12, 22, 26, 255);
-        public static readonly Color Paper = new Color32(227, 232, 220, 255);
-        public static readonly Color Muted = new Color32(142, 163, 158, 255);
-        public static readonly Color Amber = new Color32(235, 187, 100, 255);
-        public static readonly Color Green = new Color32(102, 200, 173, 255);
-        public static readonly Color Red = new Color32(235, 112, 98, 255);
+        public static readonly Color Ink = new Color32(16, 17, 31, 255);
+        public static readonly Color Paper = new Color32(230, 228, 235, 255);
+        public static readonly Color Muted = new Color32(164, 172, 195, 255);
+        public static readonly Color Amber = new Color32(225, 177, 159, 255);
+        public static readonly Color Green = new Color32(150, 204, 222, 255);
+        public static readonly Color Red = new Color32(237, 116, 123, 255);
         private static Font font;
         public static Font Font
         {

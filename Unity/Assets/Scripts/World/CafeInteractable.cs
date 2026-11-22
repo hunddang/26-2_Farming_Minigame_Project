@@ -32,7 +32,7 @@ namespace NightCafe
 
         public void Highlight(bool enabled)
         {
-            if (marker != null) marker.color = enabled ? new Color(1, 0.83f, 0.39f) : BaseColor;
+            if (marker != null) marker.color = enabled ? CafeUi.Amber : BaseColor;
         }
 
         private Color BaseColor => kind == InteractionKind.Door && isOpen

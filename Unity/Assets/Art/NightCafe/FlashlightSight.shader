@@ -28,7 +28,7 @@ Shader "NightCafe/Flashlight Sight"
                 float cone=smoothstep(0.82,0.95,dot(normalize(p+0.00001),normalize(_Facing.xy)));
                 float reach=(1-smoothstep(0.35,0.68,d))*cone*_On;
                 float nearLight=1-smoothstep(0.055,0.14,d);
-                return fixed4(0.01,0.018,0.022,0.94*(1-max(nearLight,reach)));
+                return fixed4(0.045,0.043,0.078,0.92*(1-max(nearLight,reach)));
             }
             ENDHLSL
         }

@@ -160,13 +160,25 @@ namespace NightCafe
             var routes=FindFirstObjectByType<NightRoutes>();var content=FindFirstObjectByType<NightContent>();
             game.Interact(Item(InteractionKind.Camera));game.SelectCamera(3);yield return Shot("05-tentacle-cctv");game.CloseOverlay();
             game.World.Player.Teleport(new Vector2(-8.8f,-9.5f));yield return new WaitForSeconds(0.1f);
-            game.Interact(routes.hallDoor);yield return null;yield return null;
+            Check(game.CurrentTarget == routes.hallDoor, "The marked tentacle shortcut can be selected from the lobby");
+            yield return Tap(Key.Space);
             Check(CafeWorld.RoomLayer(game.World.Player.PlanPosition)==14,"Lobby portal enters the tentacle corridor");
+            game.World.Player.Teleport(routes.tentacles[0].position + Vector3.up);
+            float tentacleDeadline = Time.time + 4.1f;
+            while (routes.TentacleHits == 0 && Time.time < tentacleDeadline) yield return null;
+            Check(routes.TentacleHits == 1, "An extending tentacle hits the player at its visible position");
             game.World.Player.Teleport(new Vector2(49,0));yield return new WaitForSeconds(0.1f);
             game.Interact(routes.portals[12].item);yield return null;yield return null;
             Check(CafeWorld.RoomLayer(game.World.Player.PlanPosition)==10 && game.Phase==ShiftPhase.Incident,"Far corridor exit starts the hall encounter");
-            game.World.Player.Teleport(new Vector2(-9,-5));game.Interact(routes.portals[6].item);yield return null;
-            InputSystem.QueueStateEvent(keyboard,new KeyboardState(Key.D,Key.LeftShift));yield return new WaitForSeconds(2.7f);
+            game.World.Player.Teleport(new Vector2(-9,-5));yield return new WaitForSeconds(0.1f);
+            Check(game.CurrentTarget == routes.portals[6].item, "The marked pursuit shortcut can be selected from the lobby");
+            yield return Tap(Key.Space);
+            Check(CafeWorld.RoomLayer(game.World.Player.PlanPosition) == 15 && routes.pursuer.gameObject.activeInHierarchy,
+                "Entering the pursuit shortcut reveals the actual pursuer");
+            Vector3 pursuerStart = routes.pursuer.position;
+            InputSystem.QueueStateEvent(keyboard,new KeyboardState(Key.D,Key.LeftShift));yield return new WaitForSeconds(1.15f);
+            Check(Vector3.Distance(pursuerStart, routes.pursuer.position) > .4f, "The pursuer closes in during corridor traversal");
+            yield return new WaitForSeconds(1.55f);
             InputSystem.QueueStateEvent(keyboard,new KeyboardState());yield return null;
             game.Interact(routes.portals[8].item);yield return null;
             Check(CafeWorld.RoomLayer(game.World.Player.PlanPosition)==13 && game.Phase==ShiftPhase.Incident,"Sprinting crosses the pursuit corridor into the separate counter");
@@ -217,7 +229,11 @@ namespace NightCafe
             yield return Shot("12-fourth-search");game.CloseOverlay();
             game.World.Player.Teleport(new Vector2(-14,-10));yield return new WaitForSeconds(0.15f);
             Check(game.Fourth.Stage==HuntStage.ThirdChase,"Arriving at the observed room starts the lure");
-            var routes=FindFirstObjectByType<NightRoutes>();game.Interact(routes.hallDoor);yield return new WaitForSeconds(0.1f);yield return Ready();
+            var routes=FindFirstObjectByType<NightRoutes>();game.Interact(routes.hallDoor);yield return new WaitForSeconds(0.1f);
+            Check(game.StoryBusy && game.story.cinemaFeed.gameObject.activeInHierarchy &&
+                CafeWorld.RoomLayer(game.story.hunter.position) == NightRoutes.TentacleCorridor,
+                "The real corridor and hunter appear in the fourth-night confrontation");
+            yield return Ready();
             Check(game.Fourth.CorridorScenePlayed && CafeWorld.RoomLayer(game.World.Player.PlanPosition)==10,"Fixed monster confrontation restores control at the safe far exit");
             game.World.Player.Teleport(new Vector2(5,-8));game.story.hunter.position=game.story.trap.position;yield return new WaitForSeconds(0.1f);
             Check(game.Fourth.Stage==HuntStage.Captured && game.story.closedNet.activeSelf,"Entering the installed trap automatically closes the net");
@@ -266,11 +282,15 @@ namespace NightCafe
             Check(game.Fifth.TentaclesReleased,"Power off, stopped indicator and emergency release resolve the tentacles");
             game.World.Player.Teleport(new Vector2(84,0));yield return new WaitForSeconds(0.1f);yield return Ready();
             Check(game.Fifth.PursuitVideoSeen,"The pursuit corridor replays the original escape route");
+            Check(routes.pursuer.gameObject.activeInHierarchy && game.Fifth.Identified,
+                "The harmless pursuer remains visible until its cause is resolved");
             game.World.Player.Teleport(new Vector2(18,-5.6f));Use(StoryAction.Computer);game.story.choices[0].onClick.Invoke();game.CloseOverlay();
             Use(StoryAction.Computer);game.story.choices[1].onClick.Invoke();
             Check(!game.Fifth.SmokeCleared && game.Fifth.Cracks==0,"Uncleared exhaust returns smoke without accumulating a mistake");
             Use(StoryAction.ExhaustBox);Use(StoryAction.Computer);game.story.choices[1].onClick.Invoke();yield return Ready();
             Check(game.Fifth.SmokeCleared,"Physical box removal and outward fan control clear the pursuit cause");
+            game.World.Player.Teleport(new Vector2(84, 0));yield return null;yield return null;
+            Check(!routes.pursuer.gameObject.activeInHierarchy, "The pursuer disappears after ventilation actually clears the smoke");
             game.World.Player.Teleport(CafeWorld.SecuritySpawn);Use(StoryAction.Accident);
             yield return Shot("18-record-cause");game.story.choices[1].onClick.Invoke();
             yield return Number("1");yield return Shot("19-record-departure");game.story.choices[0].onClick.Invoke();game.CloseOverlay();
@@ -308,7 +328,7 @@ namespace NightCafe
             foreach(var item in allItems)
                 Check(item.gameObject.layer==CafeWorld.RoomLayer(item.transform.position),"Interaction is rendered in its physical room: "+item.title);
             foreach(var portal in content.routes.portals)
-                Check(Physics2D.OverlapCircleAll(portal.target,0.32f).All(hit=>hit.isTrigger || hit.gameObject==game.World.Player.gameObject),"Door arrival avoids walls and furniture: "+portal.item.title);
+                Check(Physics2D.OverlapCircleAll(portal.ArrivalPosition,0.32f).All(hit=>hit.isTrigger || hit.gameObject==game.World.Player.gameObject),"Door arrival avoids walls and furniture: "+portal.item.title);
             foreach(int room in Enumerable.Range(8,11))
             {
                 var bounds=CafeWorld.Bounds(room);const float spacing=0.5f;

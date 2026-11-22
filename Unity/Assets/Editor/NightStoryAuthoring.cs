@@ -23,9 +23,9 @@ public static class NightStoryAuthoring
         H(StoryAction.Leak,"천장 누수 지점",new Vector2(-12,-6),"circle");
         content.leak=Group(hunt,"Water drops",new Vector2(-12,-6),9).gameObject;
         for(int i=0;i<7;i++) Shape(content.leak.transform,"Droplet",new Vector2(Mathf.Sin(i)*0.4f,i*0.22f),Vector2.one*0.1f,new Color32(110,166,174,255),5,"circle");
-        H(StoryAction.Extinguisher,"벽면 소화기",new Vector2(-18,-5.5f),"cream");
-        H(StoryAction.Net,"포획용 그물",new Vector2(18,8),"paper");
-        H(StoryAction.Anchor,"그물 고정구",new Vector2(18,5.8f),"almond");
+        H(StoryAction.Extinguisher,"벽면 소화기",new Vector2(-18,-5.5f),"extinguisher");
+        H(StoryAction.Net,"포획용 그물",new Vector2(18,8),"capture-net");
+        H(StoryAction.Anchor,"그물 고정구",new Vector2(18,5.8f),"anchor-pin");
         var markers=new List<Transform>();
         foreach(int room in new[]{9,10,11,12,13})
         {
@@ -69,10 +69,10 @@ public static class NightStoryAuthoring
         content.identity=finals[finals.Count-1].transform;
         Shape(content.identity,"Head",new Vector2(0,0.25f),new Vector2(0.35f,0.35f),Color.white,10,"player-head");
         Shape(content.identity,"Bandaged left hand",new Vector2(-0.3f,0),new Vector2(0.18f,0.28f),CafeUi.Paper,9);
-        for(int i=0;i<3;i++) F(StoryAction.Badge,"직원 명찰 · "+(i==0?game.tuning.victimName:i==1?"이도현":"박지우"),new Vector2(17+2*i,8.5f),"paper",i);
+        for(int i=0;i<3;i++) F(StoryAction.Badge,"직원 명찰 · "+(i==0?game.tuning.victimName:i==1?"이도현":"박지우"),new Vector2(17+2*i,8.5f),"staff-badge",i);
         F(StoryAction.WireCode,"촉수 표면의 잠금장치 번호",new Vector2(38,2),"note");
         F(StoryAction.Control,"냉장 설비 제어함",new Vector2(46,2),"monitor");
-        F(StoryAction.ExhaustBox,"외부 배기구를 막는 상자",new Vector2(92,1),"almond");
+        F(StoryAction.ExhaustBox,"외부 배기구를 막는 상자",new Vector2(92,1),"exhaust-crate");
         F(StoryAction.VictimCup,"오래된 명찰이 붙은 컵",new Vector2(22,-5),"cup");
         F(StoryAction.CupTable,"숙직실 테이블 · 컵 두기",new Vector2(18,-8),"table");
         F(StoryAction.Exit,"카페 출입문",new Vector2(72,0),"door");

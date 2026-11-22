@@ -61,6 +61,8 @@ public static class CafeSceneAuthoring
         game.sound = game.gameObject.AddComponent<AudioSource>(); game.sound.volume = 0.2f; game.sound.playOnAwake = false;
         NightCampaignAuthoring.Attach(game);
         NightStoryAuthoring.Attach(game);
+        NightCafeSceneLayout.Organize(game);
+        NightCafeSceneLayout.ApplyLook(game.gameObject.scene.GetRootGameObjects());
         EditorSceneManager.SaveScene(scene, "Assets/Scenes/InGame.unity");
         EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene("Assets/Scenes/Lobby.unity", true), new EditorBuildSettingsScene("Assets/Scenes/InGame.unity", true) };
         AssetDatabase.SaveAssets();
@@ -69,7 +71,7 @@ public static class CafeSceneAuthoring
         Debug.Log("NIGHT_CAFE_AUTHORING_PASS: scenes, art sprites and prefabs serialized.");
     }
 
-    private static void ImportSprites()
+    internal static void ImportSprites()
     {
         AssetDatabase.Refresh();
         foreach (string file in Directory.GetFiles(Art, "*.png"))
@@ -238,6 +240,8 @@ public static class CafeSceneAuthoring
             int layer = child.gameObject.layer;
             child.SetParent(groups[groups.ContainsKey(layer) ? layer : 0], true);
         }
+        NightCafeSceneLayout.OrganizeRooms(world);
+        NightCafeSceneLayout.ApplyLook(new[] { world.gameObject });
         world.GetComponent<CafeFont>().overrideFont = AssetDatabase.LoadAssetAtPath<Font>("Assets/Art/Fonts/NanumGothic-Regular.ttf");
         world.GetComponent<CafeFont>().Refresh();
         SavePrefab(world.gameObject, "CafeWorld");
@@ -301,6 +305,8 @@ public static class CafeSceneAuthoring
 
             start.helpPanel.SetActive(false);
             StyleUi(root);
+            NightCafeSceneLayout.OrganizeTitle(start);
+            NightCafeSceneLayout.ApplyLook(new[] { root.gameObject });
             start.buttons[0].GetComponent<CafeButtonStyle>().Select(true);
             SavePrefab(root.gameObject, "StartScreen");
     }

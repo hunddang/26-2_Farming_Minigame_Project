@@ -52,7 +52,7 @@ namespace NightCafe
             new Vector2(11,8), new Vector2(14,9), new Vector2(18,8), new Vector2(20,6),
             new Vector2(17,11), new Vector2(18,6), new Vector2(18,7)
         };
-        public static readonly string[] RoomNames = { "감시실", "로비", "홀", "창고", "숙직실", "카운터", "촉수 복도", "추격 복도", "외부", "상부 우회로", "하부 우회로" };
+        public static readonly string[] RoomNames = { "감시실", "로비", "홀", "창고", "숙직실", "카운터", "홀 연결 복도", "카운터 연결 복도", "외부", "상부 우회로", "하부 우회로" };
         public static Vector2 RoomCenter(int layer) => Centers[Mathf.Clamp(layer-8,0,Centers.Length-1)];
         public static Rect Bounds(int layer) => new Rect(RoomCenter(layer)-Sizes[layer-8]/2, Sizes[layer-8]);
         public static int RoomLayer(Vector2 position)

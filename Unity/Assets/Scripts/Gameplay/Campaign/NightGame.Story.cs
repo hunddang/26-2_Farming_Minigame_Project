@@ -88,12 +88,14 @@ namespace NightCafe
             if (overlay != Overlay.Pause)
             {
                 if (Day == 4) Fourth.Tick(Time.deltaTime); else Fifth.Tick(Time.deltaTime);
-                if (!storyBusy && Phase == ShiftPhase.Incident)
+                if (!storyBusy && (Phase == ShiftPhase.Incident || Phase == ShiftPhase.Resolved))
                 {
-                    bool safe = Day == 5 && Fifth.Identified;
                     string warning = Routes.Tick(World.Player,
-                        reason => { if (Day == 4) Fourth.Fail(reason); else Fifth.Capture(reason); }, safe, safe,
-                        Day == 5 ? (Action)(() => { Fifth.Wrong("전선에 몸이 닿았다."); RefreshCracks(); }) : null);
+                        reason => { if (Day == 4) Fourth.Fail(reason); else Fifth.Capture(reason); },
+                        suppressAttacks: Phase == ShiftPhase.Resolved || Fifth?.Identified == true,
+                        tentaclesReleased: Fifth?.TentaclesReleased == true,
+                        smokeCleared: Fifth?.SmokeCleared == true,
+                        tentacleHit: Day == 5 ? (Action)(() => { Fifth.Wrong("전선에 몸이 닿았다."); RefreshCracks(); }) : null);
                     if (warning.Length > 0) Toast(warning);
                 }
             }

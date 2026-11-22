@@ -5,7 +5,7 @@ Run with Python + Pillow. Final PNGs are imported as ordinary Unity sprites.
 from pathlib import Path
 import math
 import random
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image, ImageColor, ImageDraw
 
 OUT = Path(__file__).resolve().parents[1] / 'Unity/Assets/Art/NightCafe'
 OUT.mkdir(parents=True, exist_ok=True)
@@ -17,7 +17,42 @@ TEAL = '#5d9a8d'
 WOOD = '#85634b'
 random.seed(18)
 
+# One palette for worn steel, cold paint and the few things that should feel warm.
+BLUE = ('#10111f', '#202034', '#303149', '#434a65', '#596e89', '#8299ad', '#b8c8d4', '#e1e8e9')
+RUST = ('#151321', '#262031', '#392b3a', '#573c49', '#7d5158', '#a96d6b', '#c99c8c', '#e3cec0')
+PARCHMENT = ('#151522', '#28273b', '#454559', '#626476', '#818696', '#a2a6b0', '#c9c7c1', '#eee2d4')
+TIMBER = ('#10111f', '#25243a', '#343044', '#494051', '#655363', '#876777', '#a78e99', '#d6c4cb')
+SURFACES = {'floor-wood', 'floor-tile', 'wall', 'counter', 'desk', 'table', 'shelf', 'chair', 'bed', 'door', 'plant', 'monitor'}
+
+def night_palette(im, name):
+    rgba = im.convert('RGBA')
+    colors = {}
+    for r, g, b, a in set(rgba.getdata()):
+        if not a:
+            colors[r, g, b, a] = (0, 0, 0, 0)
+            continue
+        luma = 0.2126*r + 0.7152*g + 0.0722*b
+        level = sum(luma >= limit for limit in (23, 42, 66, 92, 121, 158, 199))
+        if name == 'title-cafe':
+            ramp = RUST if r > g + 16 else BLUE
+            if 24 < luma < 125:
+                level = min(level + 1, 5)
+        elif name in SURFACES:
+            if name == 'floor-wood':
+                ramp = TIMBER
+            else:
+                ramp = RUST if r > g + 18 and luma < 130 else BLUE
+        elif name in {'note', 'recipe', 'paper', 'milk', 'cream', 'cup'}:
+            ramp = PARCHMENT if luma > 110 else BLUE
+        else:
+            ramp = RUST if r > g + 13 else BLUE
+        colors[r, g, b, a] = (*ImageColor.getrgb(ramp[level]), a)
+    rgba.putdata([colors[pixel] for pixel in rgba.getdata()])
+    return rgba
+
 def save(im, name):
+    if name not in {'pixel', 'circle', 'flashlight', 'panel', 'button', 'button-selected'}:
+        im = night_palette(im, name)
     im.save(OUT / (name + '.png'))
 
 def canvas(w, h):
@@ -167,13 +202,34 @@ for x in range(6,124,12):d.line((x,5,x,25),fill='#3e6157')
 d.rectangle((96,12,112,16),fill=GOLD)
 save(im,'door')
 
-for name, fill in [('panel','#1e302f'),('button','#304541'),('button-selected','#d5b879'),('paper','#c6bc98')]:
+for name, fill, line in [('panel','#202034','#3c405b'),('button','#30364d','#555f7a'),('button-selected','#af8380','#d8b3a7'),('paper','#b2b5c2','#dfdce1')]:
     im,d=canvas(64,64)
-    box(d,(0,0,63,63),fill,edge='#0d1c20',width=2)
-    d.line((3,3,60,3),fill='#587064' if name!='paper' else '#e1d5ad')
-    d.line((3,3,3,60),fill='#40574e' if name!='paper' else '#d7cba5')
-    d.line((3,60,60,60),fill='#142522' if name!='paper' else '#998f72')
+    box(d,(0,0,63,63),fill,edge='#10111f',width=2)
+    d.line((3,3,60,3),fill=line)
+    d.line((3,3,3,60),fill=line)
+    d.line((3,60,60,60),fill='#171729' if name!='paper' else '#818696')
     save(im,name)
+
+# Small, separate sprites for gameplay items that previously borrowed ingredient art.
+GEAR = {'o':'#17172b', 's':'#596e89', 'l':'#a7bccd', 'r':'#6b2831', 'R':'#a84245', 'w':'#d3c5be', 'b':'#423049', 'B':'#80606a'}
+def pixel_prop(name, rows):
+    im = Image.new('RGBA', (len(rows[0]), len(rows)))
+    for y, row in enumerate(rows):
+        for x, value in enumerate(row):
+            if value != '.':
+                im.putpixel((x,y), (*ImageColor.getrgb(GEAR[value]), 255))
+    im.resize((im.width*4, im.height*4), Image.Resampling.NEAREST).save(OUT / (name + '.png'))
+
+pixel_prop('extinguisher', ('..osso..','..olsoo.','..orr.o.','.oRRro..','.oRRro..','.owwro..','.oRRro..','.oRrro..','.ooooo..'))
+pixel_prop('capture-net', ('.osssso.','oslslsl.','oslsslo.','oslslsl.','oslsslo.','oslslsl.','.osssso.','..oooo..'))
+pixel_prop('anchor-pin', ('..oslo..','.os..lo.','.os..lo.','..oslo..','...lo...','...so...','...so...','...oo...'))
+pixel_prop('exhaust-crate', ('oooooooo','oBBBBBbo','obwBBbBo','oBwBbBbo','oBBBbBBo','oBBbBBbo','obbbbbbo','oooooooo'))
+pixel_prop('staff-badge', ('..oss...','..olso..','.oooooo.','olwwwwso','olsswwso','olwwssso','olssssso','.oooooo.'))
+
+im, d = canvas(8, 8)
+d.line((0, 0, 7, 0), fill='white')
+d.line((0, 1, 7, 1), fill=(255, 255, 255, 96))
+im.save(OUT / 'cctv-scanlines.png')
 
 # Layered, hand-authored title illustration. Drawn at pixel resolution, enlarged nearest.
 im=Image.new('RGB',(640,360),'#102024');d=ImageDraw.Draw(im)

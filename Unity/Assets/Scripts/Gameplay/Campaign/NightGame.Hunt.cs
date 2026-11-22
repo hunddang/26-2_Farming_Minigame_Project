@@ -54,6 +54,7 @@ namespace NightCafe
             {
                 if (Fourth.StartThird(room)) { monsterGrace = Time.time + 1.2f; Toast("낙하자가 고개를 돌렸다. 설치한 함정으로 유인하자."); }
             }
+            if (TryCorridorConfrontation(room)) return;
             if (Fourth.Stage == HuntStage.SecondChase && (room != Fourth.TriggerRoom || Vector2.Distance(player, secondChaseStart) >= tuning.secondChaseDistance))
             {
                 Fourth.EscapeSecond(); story.hunter.gameObject.SetActive(false);
@@ -61,10 +62,6 @@ namespace NightCafe
             }
             if (Fourth.Chasing)
             {
-                if ((room == 14 || room == 15) && !Fourth.CorridorScenePlayed)
-                {
-                    Fourth.CorridorScene(); StartCoroutine(MonsterConfrontation()); return;
-                }
                 if (Time.time >= monsterGrace && room >= 8)
                 {
                     if (CafeWorld.RoomLayer(story.hunter.position) != room)
@@ -110,15 +107,59 @@ namespace NightCafe
             yield return Movie(message, tuning.cinematicSeconds, amount => story.hunter.position = basePosition + Vector2.up * (2 * (1 - amount)));
             monsterGrace = Time.time + 2;
         }
-        private IEnumerator MonsterConfrontation()
+        private bool TryCorridorConfrontation(int room)
         {
-            Vector2 start = World.Player.PlanPosition;
-            story.memoryActor.gameObject.SetActive(true); story.memoryActor.position = start + Vector2.right * 2;
-            SetLayer(story.memoryActor, CafeWorld.RoomLayer(start));
+            if (Day != 4 || !Fourth.Chasing || Fourth.CorridorScenePlayed || !NightRoutes.IsHazardCorridor(room))
+                return false;
+            Fourth.CorridorScene();
+            StartCoroutine(MonsterConfrontation(room));
+            return true;
+        }
+
+        private IEnumerator MonsterConfrontation(int room)
+        {
+            Vector2 entry = World.Player.PlanPosition;
+            float direction = entry.x < CafeWorld.RoomCenter(room).x ? 1 : -1;
+            bool tentacleFight = room == NightRoutes.TentacleCorridor;
+            Transform opponent = Routes.pursuer;
+            if (tentacleFight)
+                foreach (var arm in Routes.tentacles)
+                    if (opponent == Routes.pursuer || Mathf.Abs(arm.position.x - entry.x) < Mathf.Abs(opponent.position.x - entry.x))
+                        opponent = arm;
+
+            Vector2 opponentStart = opponent.position;
+            Quaternion opponentRotation = opponent.rotation;
+            Vector3 opponentScale = opponent.localScale;
+            Vector2 contact = tentacleFight
+                ? (Vector2)opponent.position + Vector2.up * 2.15f
+                : InsideRoom(entry + Vector2.right * direction * 2.4f, room);
+            Vector2 entranceSide = InsideRoom(contact - Vector2.right * direction * 1.8f, room);
+            story.hunter.position = entranceSide;
+            SetLayer(story.hunter, room);
+            opponent.gameObject.SetActive(true);
+            CafeWorld.ViewRoom(feedCamera, room);
+            feedCamera.transform.position = new Vector3(contact.x, contact.y, -25);
+            feedCamera.orthographicSize = 2.8f;
             yield return Movie("복도를 막던 괴물이 낙하자에게 달려들었다.\n서로 맞붙은 틈에 반대편 출구로 빠져나간다.", tuning.cinematicSeconds,
-                amount => story.memoryActor.localRotation = Quaternion.Euler(0, 0, Mathf.Sin(amount * 30) * 20));
-            story.memoryActor.gameObject.SetActive(false); Routes.SkipCorridor(World.Player);
-            previousRoom = CafeWorld.RoomLayer(World.Player.PlanPosition); story.hunter.position = InsideRoom(World.Player.PlanPosition - Vector2.right * 3, previousRoom);
+                amount =>
+                {
+                    float lunge = Mathf.Clamp01(amount * 3);
+                    float recoil = Mathf.Sin(amount * 27) * 0.24f * lunge;
+                    story.hunter.position = Vector2.Lerp(entranceSide, contact, lunge * 0.72f) + Vector2.right * recoil;
+                    if (tentacleFight)
+                    {
+                        opponent.localScale = new Vector3(1, Mathf.Lerp(0.4f, 1.15f, lunge), 1);
+                        opponent.rotation = Quaternion.Euler(0, 0, direction * (12 + recoil * 30));
+                    }
+                    else opponent.position = contact + Vector2.right * direction * (1 - lunge + recoil);
+                }, cctv: true);
+            opponent.position = opponentStart;
+            opponent.rotation = opponentRotation;
+            opponent.localScale = opponentScale;
+            if (!tentacleFight) opponent.gameObject.SetActive(false);
+            Routes.SkipCorridor(World.Player);
+            previousRoom = CafeWorld.RoomLayer(World.Player.PlanPosition);
+            story.hunter.position = InsideRoom(World.Player.PlanPosition - Vector2.right * 3, previousRoom);
             SetLayer(story.hunter, previousRoom); monsterGrace = Time.time + 2;
             if (Fourth.Stage == HuntStage.SecondChase) Fourth.EscapeSecond();
         }

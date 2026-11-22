@@ -1,80 +1,31 @@
-# Hierarchy에서 수정하는 화면 구조
+# Unity에서 게임 편집하기
 
-## Lobby
+Unity 메뉴에서 `Night Cafe → 편집 도구`를 열면 씬, 프리팹, 설정과 C# 파일을 바로 열 수 있습니다. Hierarchy의 오브젝트를 선택한 뒤 Inspector에서 Sprite, 위치, 연결된 컴포넌트를 편집할 수 있습니다.
 
-`Unity/Assets/Scenes/Lobby.unity`를 열면 `Start Camera`, `EventSystem`, `Start Screen UI`가 있습니다. `Start Screen UI`는 `Assets/Prefabs/StartScreen.prefab`의 인스턴스입니다.
+| 바꿀 것 | 편집 위치 |
+| --- | --- |
+| 시작 화면과 버튼 | `Lobby → Start Screen UI`. `Navigation`에는 버튼, `Help`에는 조작 안내가 있습니다. |
+| 방의 바닥·벽·가구·소품 | `CafeWorld.prefab → 해당 방 → Floor & Walls / Furniture / Interactions / Effects` |
+| 1일차 컵과 커피 | `CafeWorld.prefab → Cafe Hall`. `CafeWorld`의 `Cup Frames`가 컵의 애니메이션 순서입니다. |
+| 2~5일차 소품과 괴물 | `InGame → Night Events`. 사건별 부모 아래에 소품과 효과가 들어 있습니다. |
+| 문 위치와 도착점 | `InGame → Passages & Doors → Rooms and Passageways → Doors by Room / Arrivals by Room` |
+| 지름길 복도 | 같은 `Rooms and Passageways` 아래의 `홀 연결 복도`와 `카운터 연결 복도`에서 벽과 안내판을 편집합니다. `Corridor Hazards`에는 복도 이벤트 오브젝트가 있습니다. |
+| 화면과 팝업 | `NightGameUI.prefab`의 `Header`, `Shift Record`, `Inventory`, `Interaction Feedback`, `Overlays`. 5일차 조사 및 엔딩 패널은 `InGame → Night Shift UI → Night 05 UI`에 있습니다. |
+| CCTV 영상과 줄무늬 | `Night Shift UI → Overlays → CCTV Overlay`에서 영상 UI를 편집합니다. 채널별 기본 구도는 `CafeWorld.ViewCctv`와 `NightGame.Campaign.ViewShiftCamera`에서 정합니다. |
+| 시간·이동 속도·레시피·암호 | `Assets/Data/DayOneTuning.asset` |
 
-- `Cafe illustration`: `title-cafe.png` 배경. Image의 Source Image를 바꿀 수 있습니다.
-- 제목·설명·메뉴 버튼: RectTransform과 Text로 직접 편집합니다.
-- `Help`: 미리 만들어 둔 비활성 도움말 패널. 편집 시 활성화하면 내용을 볼 수 있습니다.
-- 루트의 `StartScreen`: 버튼 3개, 도움말, 닫기 버튼, 게임 씬 참조. 화면을 생성하지 않습니다.
+문은 출발하는 방 아래에 있고, 도착 마커는 도착하는 방 아래에 있습니다. 도착점을 움직이면 `NightRoutes`가 해당 마커의 월드 좌표를 사용합니다. 문과 가구를 옮길 때는 도착점이 벽이나 가구에 닿지 않는지 확인하세요. 새로 배치한 상호작용 소품은 해당 밤의 컴포넌트나 `CafeWorld.Interactables`에 등록해야 합니다.
 
-## InGame
+| 스크립트 폴더 | 편집 범위 |
+| --- | --- |
+| `Assets/Scripts/Character` | 플레이어 이동과 따라오는 카메라 |
+| `Assets/Scripts/Gameplay/Campaign` | 밤 전환, 상호작용, 추격과 조사 진행 |
+| `Assets/Scripts/Gameplay/Rules` | 밤별 판정, 퍼즐, 조정값 |
+| `Assets/Scripts/World` | 맵, 문, 복도, 배치된 소품의 참조 |
+| `Assets/Scripts/Presentation` | 시작 화면, HUD, 버튼 스타일 |
+| `Assets/Scripts/Diagnostics` | 실행 검증 |
+| `Assets/Editor` | 편집 도구, 씬 제작, 빌드 |
 
-```text
-InGame
-├─ Cafe World                         [CafeWorld.prefab]
-│  ├─ Floor Plan                      공통 바닥·벽·문·방 이름
-│  ├─ Security Room                   감시실 가구·문서·CCTV
-│  ├─ Lobby
-│  ├─ Cafe Hall                       컵·커피 효과·가구
-│  ├─ Counter                         재료·전자레인지
-│  ├─ Storage
-│  ├─ Night Room
-│  └─ Player                          [NightPlayer.prefab]
-│     ├─ Head
-│     └─ Flashlight Pivot
-│        └─ Flashlight
-├─ Night Shift UI                     [NightGameUI.prefab]
-│  ├─ Shift Record                    목표·상태·진행·규칙서 버튼
-│  ├─ Header                          타이머·현재 방·일시정지
-│  ├─ Inventory                       재료 아이콘·슬롯
-│  ├─ Interaction Feedback             조사 안내·메시지·범람 경고
-│  └─ Overlays
-│     ├─ Rules Overlay
-│     ├─ Reading Overlay
-│     ├─ CCTV Overlay
-│     ├─ Pause Overlay
-│     ├─ Failure Overlay
-│     └─ Complete Overlay
-├─ Night 02–03 Content                메뉴판·마감 소품·복도와 우회문 UI 참조
-├─ Nights 04–05 Content               추격·함정·최종 조사·영혼·시계·의자 참조
-├─ Night Shift Controller             NightGame·튜닝·씬 참조
-├─ Cameras
-│  ├─ Screen Background Camera        화면 전체 배경 초기화
-│  ├─ Map Camera
-│  └─ CCTV Camera
-└─ EventSystem                        프로젝트의 UI Input Actions 참조
-```
+아트는 짙은 남색과 바랜 청회색을 바탕으로 녹슨 붉은색을 강조점에 사용합니다. 픽셀 원본은 `Assets/Art/NightCafe`, 컵의 GIF 프레임은 그 안의 `FloatingCup`에 있습니다. `Tools/create_pixel_art.py`는 카페 배경·가구·소품·UI의 기본 PNG를 다시 생성합니다. 직접 수정한 PNG를 보존하려면 필요한 파일만 교체하세요.
 
-## 수정 방법
-
-가구·문·재료는 월드 프리팹에서 이동하거나 SpriteRenderer의 Sprite를 바꿉니다. 가구와 벽의 충돌 범위는 BoxCollider2D에서 따로 수정합니다. `CafeInteractable`의 종류·제목·내용·재료 종류는 Inspector에서 편집할 수 있습니다. 상호작용 대상을 추가하면 월드 루트 `CafeWorld.Interactables` 목록에도 등록합니다.
-
-HUD의 동적 글자는 `NightGameView` 필드 이름으로 연결되어 있습니다. 오브젝트 이름을 바꾸더라도 참조는 유지됩니다. 패널은 삭제하지 않고 켜고 끄므로, 문서를 여러 번 열어도 Hierarchy가 늘어나지 않습니다. 팝업을 편집할 때는 `Overlays` 아래 해당 패널을 활성화하세요. 게임 시작 시 모두 닫힙니다.
-
-`CafeButtonStyle`의 Idle/Selected Sprite를 교체하면 메뉴·CCTV·재료 슬롯의 선택 이미지를 바꿀 수 있습니다. UI Image는 9-slice를 사용하고, 픽셀 아트는 Point 필터와 무압축으로 가져옵니다. 루트의 `CafeFont.Override Font`에서 한글 글꼴을 바꿀 수 있습니다.
-
-`Cameras/Map Camera`의 `PlayerFollowCamera`가 플레이어를 화면 중앙에 유지합니다. Camera의 Orthographic Size는 5이며, 값을 줄이면 더 확대됩니다. 기존 12.6보다 약 2.5배 확대된 상태입니다. CCTV는 별도 카메라로 기존 고정 시점을 유지합니다.
-
-`Screen Background Camera`는 오브젝트를 그리지 않고 화면 전체를 매 프레임 초기화합니다. 부분 Viewport를 사용하는 Map Camera 바깥에 CCTV나 팝업의 이전 프레임이 남는 것을 방지합니다. 렌더링 순서는 CCTV(-2) → 배경(-1) → Map(0)이며, CCTV를 닫으면 카메라를 끄고 UI 영상 텍스처 연결도 해제합니다.
-
-기존 1일차 상태·재료 판정은 `ShiftSession`, 시간·이동·레시피 설정은 `Assets/Data/DayOneTuning.asset`에 유지됩니다. 규칙서·CCTV·메모 중 시간 진행, Esc 일시정지, 오답 페널티, 재도전 시 지식 유지 규칙도 유지했습니다.
-
-`InGame`의 `Night 02–03 Content`에서 메뉴판과 창고 칠판, 그림자, 두 복도를 편집합니다. 두 번째 밤의 CCTV 4번 채널은 로비, 세 번째 밤의 4번 채널은 촉수 복도를 표시합니다. 카메라 위치는 각 콘텐츠의 `CCTV framing` 참조를 조정합니다. 복도의 벽은 `BoxCollider2D`, 소품과 이상현상은 스프라이트, 칠판 글씨는 월드 공간 Canvas입니다.
-
-`Nights 04–05 Content`의 `Ceiling hunter`에는 소화기·포획 장비·방별 함정 표식과 낙하자가 있습니다. `Last shift restoration`에는 숫자·문서·명찰·제어함·배기구 상자·출구·영혼이 있습니다. 상호작용을 추가할 때는 해당 `NightStoryContent.Hunt Tasks` 또는 `Final Tasks` 배열에 등록하고, 위치에 맞는 방 레이어를 지정합니다. 함정의 Task Index는 설치 방 레이어 번호입니다.
-
-추가 조사 입력창(`Investigation form`), 회상과 엔딩(`Memory and ending`), 방향 시야(`Directional flashlight sight`)는 `Night Shift UI`의 씬 추가 오브젝트입니다. `NightStoryContent`가 패널과 버튼을 참조합니다. `FlashlightSight.mat`은 2D 화면 마스크용 재질입니다. 별도 CCTV 카메라 영상에는 마스크가 적용되지 않습니다.
-
-방 중심·범위·이름은 `CafeWorld`, 짝지은 문·도착점은 `NightRoutes.Portals`입니다. 월드는 방마다 구분된 XY 좌표를 사용하고 Space 상호작용으로 연결됩니다. `CafeWorld`의 크기를 수정할 때는 씬 가구·벽·문 도착점과 추격 경계도 함께 맞춰야 합니다. 현재 배치는 기획서의 잠정 연결 관계를 구현한 것이며 최종 타일 규격은 확정 전입니다.
-
-## 아트 제작
-
-`Tools/create_pixel_art.py`를 Python + Pillow로 실행하면 `Unity/Assets/Art/NightCafe`에 원본 PNG를 재현합니다. 고정 난수를 쓰는 직접 제작 픽셀 아트이며, 이미지 모델·OpenAI API·로그인 토큰을 사용하지 않습니다. 현재 세션에서는 내장 이미지 생성 도구를 사용할 수 없었고 별도 API 키도 없었습니다.
-
-이미지 모델에 전달할 미술 방향은 다음과 같습니다. 이번 PNG 제작에서는 이 프롬프트로 API를 호출하지 않았습니다.
-
-> 어두운 야간 카페의 2D 픽셀 아트. 청록색과 잿빛 목재, 오래된 종이와 은은한 호박색 조명. 비 오는 창가와 카운터 위에 떠 있는 커피 컵. 시작 화면은 왼쪽에 제목과 메뉴를 위한 여백, 오른쪽에 카페와 이상현상. 맵용 에셋은 기존 탑다운 시점의 가구·CCTV 단말기·문서·우유·초콜릿·아몬드·타피오카·크림·플레이어. 개별 스프라이트는 투명 배경, 텍스트와 워터마크 없이 제작.
-
-나눔고딕은 Google Fonts의 Nanum Gothic 배포본을 사용합니다. 원본: https://github.com/google/fonts/tree/main/ofl/nanumgothic . OFL 라이선스 파일을 함께 포함했습니다.
+일상 편집은 현재 씬과 프리팹을 열어 작업합니다. `Rebuild Authored Scenes`는 초기 제작용으로, 실행하면 배치와 UI를 다시 생성합니다.
