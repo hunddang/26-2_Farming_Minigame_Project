@@ -14,8 +14,8 @@ namespace NightCafe
         private float failureStarted = -1;
         public int Day { get; private set; } = 1;
         public LaterShift Later => laterShift;
-        public ShiftPhase Phase => laterShift?.Phase ?? Session?.Phase ?? ShiftPhase.Surveillance;
-        private NightRoutes Routes => Day == 3 ? nightContent.routes : null;
+        public ShiftPhase Phase => Fourth?.Phase ?? Fifth?.Phase ?? laterShift?.Phase ?? Session?.Phase ?? ShiftPhase.Surveillance;
+        private NightRoutes Routes => nightContent == null ? null : nightContent.routes;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         public static void ResetCampaignEntry() => pendingDay = 1;
@@ -28,7 +28,10 @@ namespace NightCafe
             if (view.nightHeader != null) view.nightHeader.text = $"NIGHT SHIFT  /  {Day:00}";
             if (view.nightTitle != null) view.nightTitle.text = Day == 1 ? "첫 번째 밤" : Day == 2 ? "두 번째 밤" : "세 번째 밤";
             view.completeButtons[0].GetComponentInChildren<Text>().text =
-                Day < 3 && nightContent != null ? "다음 밤 시작" : "시작 화면으로";
+                Day < 5 && nightContent != null ? "다음 밤 시작" : "시작 화면으로";
+            if (Routes != null) Routes.Activate(World,Day);
+            InitializeSight();
+            if (Day >= 4) { BeginAdvanced(); return; }
             if (Day == 1) return;
 
             laterShift = new LaterShift(Day, Day == 2 ? tuning.secondNightSeconds : tuning.thirdNightSeconds,
@@ -58,7 +61,7 @@ namespace NightCafe
 
         public void FinishShift()
         {
-            if (Phase == ShiftPhase.Complete && Day < 3 && nightContent != null) LoadShift(Day + 1);
+            if (Phase == ShiftPhase.Complete && Day < 5 && nightContent != null) LoadShift(Day + 1);
             else ReturnToLobby();
         }
 
@@ -114,33 +117,36 @@ namespace NightCafe
             if (index == 3)
             {
                 if (Day == 2) return "로비";
-                if (Routes != null) return "촉수 복도";
+                if (Day == 3) return "촉수 복도";
+                if (Day == 4) return "로비";
             }
             return CafeWorld.CameraNames[index];
         }
 
         private void ViewShiftCamera(int index)
         {
-            if (index == 3 && Routes != null)
+            if (index == 3 && Day == 3 && Routes != null)
             {
                 Routes.ViewTentacles(feedCamera);
                 return;
             }
-            if (Day != 2 || index != 3)
+            if ((Day != 2 && Day != 4) || index != 3)
             {
                 World.ViewCctv(feedCamera, index);
                 return;
             }
             feedCamera.transform.SetPositionAndRotation(nightContent.lobbyCctv.position, nightContent.lobbyCctv.rotation);
-            feedCamera.orthographicSize = 7;
+            feedCamera.orthographicSize = 5.5f;
             feedCamera.cullingMask = CafeWorld.RoomMask(nightContent.lobbyCctv.position);
         }
 
         private bool TryRoute(CafeInteractable item)
         {
             if (Routes == null) return false;
+            if (Day >= 4 && BeforeStoryTravel(item)) return true;
             if (Routes.IsDetourDoor(item) && !item.isOpen)
             {
+                Routes.PreparePuzzle(item);
                 view.readingTitle.text = "쓰레기 처리 우회문";
                 OpenOverlay(Overlay.Detour, view.reading);
                 view.readingBody.gameObject.SetActive(false);
@@ -149,6 +155,11 @@ namespace NightCafe
                 return true;
             }
             if (!Routes.Enter(item, World.Player)) return false;
+            if(Day==5 && Fifth.Stage==FinaleStage.Escort)
+            {
+                int destination=CafeWorld.RoomLayer(World.Player.PlanPosition);
+                story.spirit.position=InsideRoom(World.Player.PlanPosition+Vector2.left*0.8f,destination);SetLayer(story.spirit,destination);
+            }
             if (nearest != null) nearest.Highlight(false);
             nearest = null;
             return true;
@@ -170,7 +181,7 @@ namespace NightCafe
             {
                 Routes.UnlockDetour();
                 CloseOverlay();
-                Toast("쓰레기봉투를 모두 치웠다. 창고와 카운터 사이의 우회문이 열렸다.");
+                Toast("쓰레기봉투를 모두 치웠다. 이 우회문을 열 수 있다.");
             }
             else RefreshDetour();
         }
@@ -203,7 +214,7 @@ namespace NightCafe
                 view.completeTitle.text = Day == 2 ? "두 번째 밤이 끝났다" : "세 번째 밤이 끝났다";
                 view.completeBody.text = Day == 2
                     ? "메뉴판이 조용해졌다. 감시실 모니터에 다음 근무가 표시된다."
-                    : "홀과 창고가 조용해졌다. 준비된 세 번의 야간 근무를 마쳤다.";
+                    : "홀과 창고가 조용해졌다. 감시실 모니터에 네 번째 근무가 표시된다.";
                 return;
             }
             view.failureHeader.text = $"INCIDENT LOST  /  {Day:00}";

@@ -15,6 +15,19 @@ MonoBehaviour:
   incidentSeconds: 180
   secondNightSeconds: 300
   thirdNightSeconds: 360
+  fourthNightSeconds: 540
+  fifthNightSeconds: 360
+  discoverySeconds: 300
+  heatMilkSeconds: 2
+  ceilingMonsterSpeed: 3.4
+  sprayRange: 4
+  secondChaseDistance: 5
+  cinematicSeconds: 2
+  cameraPassword: 2974
+  controlPassword: 4107
+  accidentTime: 02:17:36
+  victimName: "\uAE40\uC11C\uC724"
+  victimNumber: A-017
   mistakePenaltySeconds: 20
   surgeSeconds: 5
   surgeMultiplier: 2
@@ -22,4 +35,4 @@ MonoBehaviour:
   runMultiplier: 1.6
   interactionDistance: 1.9
   cleanupSeconds: 3
-  recipe: 0000000001000000
+  recipe: 0100000000000000

@@ -57,7 +57,7 @@ namespace NightCafe
             if (shift.Day == 2) return;
 
             foreach (var seat in seats) world.Interactables.Add(seat.chair);
-            if (routes != null) routes.Activate(world, shift.Day);
+
             previousChairs = shift.ChairsLeft;
             shadowParts = shadow.GetComponentsInChildren<Transform>(true);
             chalkHome = chalk.localPosition;

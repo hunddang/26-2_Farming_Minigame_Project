@@ -1,0 +1,659 @@
+fileFormatVersion: 2
+guid: 92b28637b55f451aaefa2e781e540ee8
+TextureImporter:
+  internalIDToNameTable: []
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 0
+    aniso: 1
+    mipBias: 0
+    wrapU: 0
+    wrapV: 0
+    wrapW: 0
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 56
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 0
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Android
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: floating-cup-00
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 765
+        width: 55
+        height: 255
+      alignment: 9
+      pivot: {x: 0.5, y: 0.8921569}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5f7a9636fea241949eb008979cd85771
+      internalID: 21300000
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: floating-cup-01
+      rect:
+        serializedVersion: 2
+        x: 55
+        y: 765
+        width: 55
+        height: 255
+      alignment: 9
+      pivot: {x: 0.5, y: 0.8921569}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e41f7d340bb0485387e6de5f15ae2176
+      internalID: 21300002
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: floating-cup-02
+      rect:
+        serializedVersion: 2
+        x: 110
+        y: 765
+        width: 55
+        height: 255
+      alignment: 9
+      pivot: {x: 0.5, y: 0.8921569}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9d00bfe5e7594301a076f1ec726aaa2d
+      internalID: 21300004
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: floating-cup-03
+      rect:
+        serializedVersion: 2
+        x: 165
+        y: 765
+        width: 55
+        height: 255
+      alignment: 9
+      pivot: {x: 0.5, y: 0.8921569}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b1a39895e1db466da4b6e8a0699f5fac
+      internalID: 21300006
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: floating-cup-04
+      rect:
+        serializedVersion: 2
+        x: 220
+        y: 765
+        width: 55
+        height: 255
+      alignment: 9
+      pivot: {x: 0.5, y: 0.8921569}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 74b1e34dd4cf42b78651b686dc016882
+      internalID: 21300008
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: floating-cup-05
+      rect:
+        serializedVersion: 2
+        x: 275
+        y: 765
+        width: 55
+        height: 255
+      alignment: 9
+      pivot: {x: 0.5, y: 0.8921569}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 33ad92a1fc384dd58f67064fbe7e5d73
+      internalID: 21300010
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: floating-cup-06
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 510
+        width: 55
+        height: 255
+      alignment: 9
+      pivot: {x: 0.5, y: 0.8921569}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ae0ed0def79c4e67989e16d5ca17289c
+      internalID: 21300012
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: floating-cup-07
+      rect:
+        serializedVersion: 2
+        x: 55
+        y: 510
+        width: 55
+        height: 255
+      alignment: 9
+      pivot: {x: 0.5, y: 0.8921569}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ce9e32735edf4e90824d943fe52ed066
+      internalID: 21300014
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: floating-cup-08
+      rect:
+        serializedVersion: 2
+        x: 110
+        y: 510
+        width: 55
+        height: 255
+      alignment: 9
+      pivot: {x: 0.5, y: 0.8921569}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fad0f0d475124d7597cc19bf95e9b6d8
+      internalID: 21300016
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: floating-cup-09
+      rect:
+        serializedVersion: 2
+        x: 165
+        y: 510
+        width: 55
+        height: 255
+      alignment: 9
+      pivot: {x: 0.5, y: 0.8921569}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7a86dd5ef800465588e8f3ffe25ec298
+      internalID: 21300018
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: floating-cup-10
+      rect:
+        serializedVersion: 2
+        x: 220
+        y: 510
+        width: 55
+        height: 255
+      alignment: 9
+      pivot: {x: 0.5, y: 0.8921569}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 43545fe7fb944a29a40cedb1e912e758
+      internalID: 21300020
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: floating-cup-11
+      rect:
+        serializedVersion: 2
+        x: 275
+        y: 510
+        width: 55
+        height: 255
+      alignment: 9
+      pivot: {x: 0.5, y: 0.8921569}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fe18b1296a77457a9c14cbe3ffbfb149
+      internalID: 21300022
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: floating-cup-12
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 255
+        width: 55
+        height: 255
+      alignment: 9
+      pivot: {x: 0.5, y: 0.8921569}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6251687363e0476dbd229f4b7537f277
+      internalID: 21300024
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: floating-cup-13
+      rect:
+        serializedVersion: 2
+        x: 55
+        y: 255
+        width: 55
+        height: 255
+      alignment: 9
+      pivot: {x: 0.5, y: 0.8921569}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: db80c712f9d74ae5919c335bfd7eafa6
+      internalID: 21300026
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: floating-cup-14
+      rect:
+        serializedVersion: 2
+        x: 110
+        y: 255
+        width: 55
+        height: 255
+      alignment: 9
+      pivot: {x: 0.5, y: 0.8921569}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 893d435bce1d4999bd137a19cb226363
+      internalID: 21300028
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: floating-cup-15
+      rect:
+        serializedVersion: 2
+        x: 165
+        y: 255
+        width: 55
+        height: 255
+      alignment: 9
+      pivot: {x: 0.5, y: 0.8921569}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 23a5e6a930fd484a93655b7dbfc7cb02
+      internalID: 21300030
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: floating-cup-16
+      rect:
+        serializedVersion: 2
+        x: 220
+        y: 255
+        width: 55
+        height: 255
+      alignment: 9
+      pivot: {x: 0.5, y: 0.8921569}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3e37f9d8d7484ae3bfd30db01d3a4f99
+      internalID: 21300032
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: floating-cup-17
+      rect:
+        serializedVersion: 2
+        x: 275
+        y: 255
+        width: 55
+        height: 255
+      alignment: 9
+      pivot: {x: 0.5, y: 0.8921569}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c35eb4c7a0a541f0908dac664405daee
+      internalID: 21300034
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: floating-cup-18
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 0
+        width: 55
+        height: 255
+      alignment: 9
+      pivot: {x: 0.5, y: 0.8921569}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 917799c3339140bd9ae38d75d8421ef9
+      internalID: 21300036
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: floating-cup-19
+      rect:
+        serializedVersion: 2
+        x: 55
+        y: 0
+        width: 55
+        height: 255
+      alignment: 9
+      pivot: {x: 0.5, y: 0.8921569}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3f9b3226a49746e08a12736be9d06d85
+      internalID: 21300038
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: floating-cup-20
+      rect:
+        serializedVersion: 2
+        x: 110
+        y: 0
+        width: 55
+        height: 255
+      alignment: 9
+      pivot: {x: 0.5, y: 0.8921569}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1a483f7c6f1a426abc13726029d6f57b
+      internalID: 21300040
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: floating-cup-21
+      rect:
+        serializedVersion: 2
+        x: 165
+        y: 0
+        width: 55
+        height: 255
+      alignment: 9
+      pivot: {x: 0.5, y: 0.8921569}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 559ba72066e14518aaab9ed6f8179fec
+      internalID: 21300042
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: floating-cup-22
+      rect:
+        serializedVersion: 2
+        x: 220
+        y: 0
+        width: 55
+        height: 255
+      alignment: 9
+      pivot: {x: 0.5, y: 0.8921569}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 25ea8fbe659a446a936e6d29f3eba04b
+      internalID: 21300044
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 5e97eb03825dee720800000000000000
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      floating-cup-00: 21300000
+      floating-cup-01: 21300002
+      floating-cup-02: 21300004
+      floating-cup-03: 21300006
+      floating-cup-04: 21300008
+      floating-cup-05: 21300010
+      floating-cup-06: 21300012
+      floating-cup-07: 21300014
+      floating-cup-08: 21300016
+      floating-cup-09: 21300018
+      floating-cup-10: 21300020
+      floating-cup-11: 21300022
+      floating-cup-12: 21300024
+      floating-cup-13: 21300026
+      floating-cup-14: 21300028
+      floating-cup-15: 21300030
+      floating-cup-16: 21300032
+      floating-cup-17: 21300034
+      floating-cup-18: 21300036
+      floating-cup-19: 21300038
+      floating-cup-20: 21300040
+      floating-cup-21: 21300042
+      floating-cup-22: 21300044
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

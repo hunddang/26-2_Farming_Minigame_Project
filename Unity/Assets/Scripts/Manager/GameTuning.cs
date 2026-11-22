@@ -11,6 +11,19 @@ namespace NightCafe
         [Min(10)] public float incidentSeconds = 180;
         [Min(10)] public float secondNightSeconds = 300;
         [Min(10)] public float thirdNightSeconds = 360;
+        [Min(10)] public float fourthNightSeconds = 540;
+        [Min(10)] public float fifthNightSeconds = 360;
+        [Min(10)] public float discoverySeconds = 300;
+        [Min(0.1f)] public float heatMilkSeconds = 2;
+        [Min(1)] public float ceilingMonsterSpeed = 3.4f;
+        [Min(1)] public float sprayRange = 4;
+        [Min(1)] public float secondChaseDistance = 5;
+        [Min(0.1f)] public float cinematicSeconds = 2;
+        public string cameraPassword = "2974";
+        public string controlPassword = "4107";
+        public string accidentTime = "02:17:36";
+        public string victimName = "김서윤";
+        public string victimNumber = "A-017";
         [Min(0)] public float mistakePenaltySeconds = 20;
         [Min(0)] public float surgeSeconds = 5;
         [Min(1)] public float surgeMultiplier = 2;
@@ -18,7 +31,7 @@ namespace NightCafe
         [Min(1)] public float runMultiplier = 1.6f;
         [Min(0.5f)] public float interactionDistance = 1.9f;
         [Min(0)] public float cleanupSeconds = 3;
-        public Ingredient[] recipe = { Ingredient.Milk, Ingredient.Chocolate };
+        public Ingredient[] recipe = { Ingredient.Chocolate, Ingredient.Milk };
 
         public static string IngredientName(Ingredient ingredient)
         {

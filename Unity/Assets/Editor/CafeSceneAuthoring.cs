@@ -29,6 +29,7 @@ public static class CafeSceneAuthoring
         const string tuningPath = "Assets/Data/DayOneTuning.asset";
         var tuning = AssetDatabase.LoadAssetAtPath<GameTuning>(tuningPath);
         if (tuning == null) { tuning = ScriptableObject.CreateInstance<GameTuning>(); AssetDatabase.CreateAsset(tuning, tuningPath); }
+        EditorUtility.SetDirty(tuning);
         string backup = Path.GetFullPath("../Artifacts/SceneBackups/" + DateTime.Now.ToString("yyyyMMdd-HHmmss"));
         Directory.CreateDirectory(backup);
         foreach (string file in new[] { "Lobby", "InGame" })
@@ -59,6 +60,7 @@ public static class CafeSceneAuthoring
         game.feedCamera.transform.SetParent(cameras); game.feedCamera.enabled = false;
         game.sound = game.gameObject.AddComponent<AudioSource>(); game.sound.volume = 0.2f; game.sound.playOnAwake = false;
         NightCampaignAuthoring.Attach(game);
+        NightStoryAuthoring.Attach(game);
         EditorSceneManager.SaveScene(scene, "Assets/Scenes/InGame.unity");
         EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene("Assets/Scenes/Lobby.unity", true), new EditorBuildSettingsScene("Assets/Scenes/InGame.unity", true) };
         AssetDatabase.SaveAssets();
@@ -169,9 +171,9 @@ public static class CafeSceneAuthoring
         world.Player.transform.SetParent(world.transform, true);
         world.gameObject.AddComponent<CafeFont>();
         var groups = new Dictionary<int, Transform>();
-        foreach (int layer in new[] { 0, 8, 9, 10, 11, 12 })
+        foreach (int layer in new[] { 0, 8, 9, 10, 11, 12, 13 })
         {
-            string name = layer == 0 ? "Floor Plan" : new[] { "Security Room", "Lobby", "Cafe Hall", "Storage", "Night Room" }[layer-8];
+            string name = layer == 0 ? "Floor Plan" : new[] { "Security Room", "Lobby", "Cafe Hall", "Storage", "Night Room", "Counter" }[layer-8];
             var group = new GameObject(name).transform; group.SetParent(world.transform, false); groups[layer] = group;
         }
         var renderers = world.GetComponentsInChildren<SpriteRenderer>(true);
@@ -179,7 +181,7 @@ public static class CafeSceneAuthoring
         {
             string name = renderer.name;
             string key = null;
-            if (name is "SECURITY" or "LOBBY" or "STORAGE" or "NIGHT ROOM") key = "floor-tile";
+            if (name is "SECURITY" or "LOBBY" or "STORAGE" or "NIGHT ROOM" or "COUNTER") key = "floor-tile";
             if (name == "CAFE") key = "floor-wood";
             if (name == "Wall") key = "wall";
             if (name is "Bar counter" or "Back bar") key = "counter";
@@ -198,6 +200,7 @@ public static class CafeSceneAuthoring
                     InteractionKind.Camera => "monitor", InteractionKind.Note => "note", InteractionKind.RuleBook => "book",
                     InteractionKind.Recipe => "recipe", InteractionKind.Cup => "cup", InteractionKind.Door => "door",
                     InteractionKind.Ingredient => new[] { "milk","chocolate","almond","tapioca","cream" }[(int)item.ingredient],
+                    InteractionKind.NightTask when item.nightAction==NightAction.Microwave => "monitor",
                     _ => "book" };
                 if (item.kind == InteractionKind.Cup)
                     foreach (Transform child in item.transform) child.gameObject.SetActive(false);
@@ -224,6 +227,7 @@ public static class CafeSceneAuthoring
             }
             if (name is "Table runner" or "Planter" or "Edge" or "Floor seam") renderer.gameObject.SetActive(false);
         }
+        ConfigureCup(world);
         // Serialize the player and common furniture as reusable nested prefabs.
         SavePrefab(world.Player.gameObject, "NightPlayer");
         var table = renderers.First(r => r.name == "Cafe table");
@@ -240,9 +244,24 @@ public static class CafeSceneAuthoring
         return world;
     }
 
+    internal static void ConfigureCup(CafeWorld world)
+    {
+        var frames = AssetDatabase.LoadAllAssetsAtPath(Art + "FloatingCup/floating-cup.png")
+            .OfType<Sprite>().OrderBy(frame => frame.name, StringComparer.Ordinal).ToArray();
+        if (frames.Length != 23)
+            throw new InvalidOperationException("Floating cup sprite sheet must contain all 23 frames.");
+
+        world.CupFrames = frames;
+        var renderer = world.Cup.GetComponent<SpriteRenderer>();
+        Vector3 originalScale = world.Cup.localScale;
+        renderer.drawMode = SpriteDrawMode.Simple;
+        renderer.sprite = frames[0];
+        world.Cup.localScale = originalScale;
+    }
+
     private static void ValidateScene(CafeWorld world, NightGameView view)
     {
-        if (world.Player == null || world.Cup == null || world.Flood == null || world.Interactables.Count < 15)
+        if (world.Player == null || world.Cup == null || world.Flood == null || world.Interactables.Count(i => i.kind == InteractionKind.Ingredient) != 5)
             throw new InvalidOperationException("World references are incomplete.");
         if (view.inventoryButtons.Length != 5 || view.cameraButtons.Length != 4 || view.completeBody == null)
             throw new InvalidOperationException("UI references are incomplete.");
@@ -260,7 +279,7 @@ public static class CafeSceneAuthoring
             CafeUiAuthoring.Label(root, "NIGHT CAFÉ  /  FIELD NOTES", 86, 82, 650, 40, 23, CafeUi.Amber);
             CafeUiAuthoring.Label(root, "이상현상\n퇴마 기록", 80, 196, 700, 222, 80);
             CafeUiAuthoring.Label(root, "밤이 깊어지면, 규칙을 지키세요.", 87, 460, 650, 50, 29, CafeUi.Muted);
-            CafeUiAuthoring.Label(root, "카메라로 관찰하고, 현장에서 답을 찾으세요.\n야간 근무 첫날 — 끝없이 쏟아지는 아메리카노", 87, 542, 650, 96, 23, CafeUi.Muted);
+            CafeUiAuthoring.Label(root, "카메라로 관찰하고, 현장에서 답을 찾으세요.\n야간 근무 첫날 — 다섯 밤의 야간 근무", 87, 542, 650, 96, 23, CafeUi.Muted);
             start.buttons = new[] {
                 CafeUiAuthoring.Button(root, "01     근무 시작", 87, 694, 590, 82, null),
                 CafeUiAuthoring.Button(root, "02     조작 안내", 87, 796, 590, 70, null),
@@ -363,7 +382,7 @@ public static class CafeSceneAuthoring
             CafeUiAuthoring.Label(body, "야간 근무 규칙서", 64, 110, 900, 65, 42);
             CafeUiAuthoring.Panel(body, "Rule divider", 64, 210, 932, 1, CafeUi.Muted);
             CafeUiAuthoring.Label(body, "01", 64, 260, 100, 50, 28, CafeUi.Amber);
-            CafeUiAuthoring.Label(body, "아메리카노는 너무 써서 하늘을 난다.", 150, 260, 800, 70, 30);
+            CafeUiAuthoring.Label(body, "에스프레소는 너무 써서 하늘을 난다.", 150, 260, 800, 70, 30);
             CafeUiAuthoring.Label(body, "02", 64, 380, 100, 50, 28, CafeUi.Amber);
             CafeUiAuthoring.Label(body, "카페모카는 너무 끈적해서 목이 막힌다.", 150, 380, 800, 70, 30);
             CafeUiAuthoring.Label(body, "관찰한 것을 기억할 것.\n레시피는 카페에 보관한다.", 64, 520, 900, 100, 23, CafeUi.Muted);

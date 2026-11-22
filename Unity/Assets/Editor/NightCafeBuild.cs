@@ -12,7 +12,6 @@ public static class NightCafeBuild
 {
     private const string Lobby = "Assets/Scenes/Lobby.unity";
     private const string InGame = "Assets/Scenes/InGame.unity";
-    private static int checks;
 
     // One-time bootstrap, also callable using Unity -batchmode -executeMethod.
     public static void PrepareAndBuild()
@@ -33,7 +32,7 @@ public static class NightCafeBuild
     {
         var tags = new SerializedObject(AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/TagManager.asset")[0]);
         var layers = tags.FindProperty("layers");
-        string[] roomLayers = { "Security Room", "Lobby Room", "Cafe Room", "Storage Room", "Night Room" };
+        string[] roomLayers = CafeWorld.RoomNames;
         for (int i = 0; i < roomLayers.Length; i++) layers.GetArrayElementAtIndex(8 + i).stringValue = roomLayers[i];
         tags.ApplyModifiedPropertiesWithoutUndo();
         PlayerSettings.companyName = "University Project";
@@ -61,52 +60,10 @@ public static class NightCafeBuild
         }
     }
 
-    [MenuItem("Night Cafe/Validate Day One Rules")]
+    [MenuItem("Night Cafe/Validate All Five Nights")]
     public static void ValidateRules()
     {
-        checks = 0;
-        var tuning = ScriptableObject.CreateInstance<GameTuning>();
-        var session = new ShiftSession(tuning);
-        Assert(session.Phase == ShiftPhase.Surveillance && session.Remaining == 180, "Initial surveillance state");
-        session.Tick(60); Assert(session.Remaining == 180, "No incident timer in surveillance");
-        Assert(!session.Collect(Ingredient.Milk), "No ingredient collection before incident");
-        session.StartIncident(); session.Tick(10); Assert(session.Remaining == 170, "Incident timer");
-        session.StartIncident(); Assert(session.Remaining == 170, "Incident cannot reset itself");
-        Assert(session.Collect(Ingredient.Milk), "Ingredient collection");
-        Assert(!session.Collect(Ingredient.Milk), "No duplicate inventory");
-        Assert(session.TryPour() && session.RecipeStep == 1 && session.Phase == ShiftPhase.Incident, "Partial recipe is not failure");
-        Assert(!session.Inventory[0] && session.SelectedSlot == -1, "Pour consumes selection");
-        session.Collect(Ingredient.Almond); Assert(!session.TryPour(), "Wrong ingredient");
-        Assert(session.Mistakes == 1 && session.RecipeStep == 0 && session.Remaining == 150, "Mistake resets progress and deducts time");
-        session.Tick(6); Assert(session.Remaining == 139 && session.SurgeRemaining == 0, "Surge splits time accurately across its end");
-        session.Collect(Ingredient.Milk); Assert(session.TryPour(), "Used ingredients can be reacquired");
-        session.Collect(Ingredient.Chocolate); Assert(session.TryPour() && session.Phase == ShiftPhase.Resolved, "Correct recipe resolves");
-        session.ReturnToSecurity(); Assert(session.Phase == ShiftPhase.Resolved, "Return waits for automatic cleanup");
-        session.Tick(4); Assert(session.CleanupRemaining == 0 && session.Remaining == 139, "Cleanup without incident timer");
-        session.ReturnToSecurity(); Assert(session.Phase == ShiftPhase.Complete, "Return completes day");
-        session = new ShiftSession(tuning); session.StartIncident(); session.Collect(Ingredient.Chocolate);
-        Assert(!session.TryPour() && session.RecipeStep == 0, "Wrong ingredient order");
-        session.CupInspected = session.RecipeRead = true; session.Tick(999);
-        Assert(session.Phase == ShiftPhase.Failed && session.Remaining == 0, "Timeout fails without negative time");
-        session.RetryIncident();
-        Assert(session.Phase == ShiftPhase.Incident && session.Remaining == 180 && session.RecipeStep == 0 && session.Mistakes == 0 && session.SelectedSlot == -1, "Retry resets incident state");
-        Assert(session.CupInspected && session.RecipeRead, "Retry preserves read knowledge");
-        Assert(Array.TrueForAll(session.Inventory, value => !value), "Retry clears inventory");
-        session.Select(99); Assert(session.SelectedSlot == -1, "Invalid selection ignored");
-        session.Collect(Ingredient.Milk); session.Select(0); Assert(session.SelectedSlot == -1, "Same hotkey deselects");
-        session.Tick(179); session.Collect(Ingredient.Cream); session.TryPour();
-        Assert(session.Phase == ShiftPhase.Failed, "Penalty can cause failure");
-        UnityEngine.Object.DestroyImmediate(tuning);
-        string path = Path.GetFullPath(Path.Combine(Application.dataPath, "../../Artifacts/rule-tests.txt"));
-        Directory.CreateDirectory(Path.GetDirectoryName(path));
-        File.WriteAllText(path, "PASS: " + checks + " day-one state/rule checks.\n");
-        Debug.Log("NIGHT_CAFE_RULE_TESTS_PASS: " + checks);
-    }
-
-    private static void Assert(bool condition, string label)
-    {
-        checks++;
-        if (!condition) throw new InvalidOperationException("Night Cafe validation failed: " + label);
+        UpdatedDesignValidation.Run();
     }
 
     [MenuItem("Night Cafe/Build Windows FHD")]

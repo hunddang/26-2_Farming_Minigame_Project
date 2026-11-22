@@ -17,8 +17,8 @@ namespace NightCafe
         public NightGameView view;
         public CafeWorld World => world;
         public CafeInteractable CurrentTarget => nearest;
-        public bool InputBlocked => overlay != Overlay.None || pouring || Phase == ShiftPhase.Failed;
-        private enum Overlay { None, Cctv, Rules, Reading, Detour, Pause, Failure, Complete }
+        public bool InputBlocked => overlay != Overlay.None || pouring || storyBusy || Phase == ShiftPhase.Failed;
+        private enum Overlay { None, Cctv, Rules, Reading, Detour, StoryForm, Pause, Failure, Complete }
         private Overlay overlay;
         private GameObject modal;
         public Camera feedCamera;
@@ -35,6 +35,7 @@ namespace NightCafe
         private Button[] menuButtons;
         private float toastUntil, pulseClock, clatterAt;
         private bool pouring;
+        private float cupAnimationTime;
         public AudioSource sound;
         private AudioClip clatter;
         private float floodAtResolution;
@@ -72,7 +73,9 @@ namespace NightCafe
         private void Update()
         {
             if (Session == null) return;
-            pulseClock += Time.unscaledDeltaTime;
+            UpdateSight();
+            if (Day >= 4) { UpdateAdvanced(); return; }
+            pulseClock += Time.deltaTime;
             // Reading rules, recipes and CCTV never freezes the incident; only Pause does.
             if (overlay != Overlay.Pause)
             {
@@ -82,24 +85,25 @@ namespace NightCafe
                     laterShift.Tick(Time.deltaTime);
                     if (Routes != null && (Phase == ShiftPhase.Surveillance || Phase == ShiftPhase.Incident))
                     {
-                        string warning = Routes.Tick(World.Player, laterShift);
+                        string warning = Routes.Tick(World.Player, message => laterShift.Fail(message,NightFailure.Passage));
                         if (warning.Length != 0) Toast(warning);
                     }
                 }
             }
-            if (Phase == ShiftPhase.Failed && overlay != Overlay.Failure && (laterShift == null || AnimateLaterFailure())) ShowEnd(false);
+            if (Phase == ShiftPhase.Failed && overlay != Overlay.Failure && (laterShift == null ? AnimateFirstFailure() : AnimateLaterFailure())) ShowEnd(false);
             if (Phase == ShiftPhase.Complete && overlay != Overlay.Complete) ShowEnd(true);
             HandleInput();
             if (!InputBlocked)
             {
                 Vector2 pos = World.Player.PlanPosition;
                 if (laterShift != null) UpdateLaterShiftAt(pos);
-                else if (pos.x > -6.5f && pos.x < 13 && Session.Phase == ShiftPhase.Surveillance)
+                else if (CafeWorld.RoomLayer(pos) == 10 && Session.Phase == ShiftPhase.Surveillance)
                 {
                     Session.StartIncident();
+                    cupAnimationTime = 0;
                     Toast("컵이 회전하며 커피를 쏟아내기 시작했다!", 5);
                 }
-                if (laterShift == null && pos.x < -7.5f && pos.y > 2.5f) Session.ReturnToSecurity();
+                if (laterShift == null && CafeWorld.RoomLayer(pos) == 8) Session.ReturnToSecurity();
                 FindNearest();
             }
             else if (nearest != null) { nearest.Highlight(false); nearest = null; }
@@ -111,11 +115,11 @@ namespace NightCafe
         private void HandleInput()
         {
             var keys = Keyboard.current;
-            if (keys == null || pouring || (Phase == ShiftPhase.Failed && overlay != Overlay.Failure)) return;
+            if (keys == null || pouring || storyBusy || (Phase == ShiftPhase.Failed && overlay != Overlay.Failure)) return;
             if (keys.escapeKey.wasPressedThisFrame)
             {
                 if (overlay == Overlay.None) Pause();
-                else if (overlay == Overlay.Pause || overlay == Overlay.Reading || overlay == Overlay.Rules || overlay == Overlay.Cctv || overlay == Overlay.Detour) CloseOverlay();
+                else if (overlay == Overlay.Pause || overlay == Overlay.Reading || overlay == Overlay.Rules || overlay == Overlay.Cctv || overlay == Overlay.Detour || overlay == Overlay.StoryForm) CloseOverlay();
                 return;
             }
             if (keys.tabKey.wasPressedThisFrame && (overlay == Overlay.None || overlay == Overlay.Rules))
@@ -139,6 +143,7 @@ namespace NightCafe
                 if (keys.spaceKey.wasPressedThisFrame) CloseOverlay();
                 return;
             }
+            if (overlay == Overlay.StoryForm) { HandleStoryForm(keys); return; }
             if (overlay == Overlay.Detour)
             {
                 HandleDetourInput(keys);
@@ -149,6 +154,7 @@ namespace NightCafe
             if (keys.digit3Key.wasPressedThisFrame) SelectSlot(2);
             if (keys.digit4Key.wasPressedThisFrame) SelectSlot(3);
             if (keys.digit5Key.wasPressedThisFrame) SelectSlot(4);
+            if (Day == 4 && keys.eKey.wasPressedThisFrame && Fourth.Chasing) { UseSpray(); return; }
             if (keys.spaceKey.wasPressedThisFrame && nearest != null) Interact(nearest);
             else if (keys.eKey.wasPressedThisFrame && nearest != null && nearest.nightAction == NightAction.Chair)
                 UseNightTask(nearest, true);
@@ -186,14 +192,18 @@ namespace NightCafe
                 case InteractionKind.Camera:
                     if (CafeWorld.RoomLayer(World.Player.PlanPosition) == 8) OpenCctv();
                     break;
-                case InteractionKind.NightTask: UseNightTask(item); break;
+                case InteractionKind.Story: UseStoryTask(item); break;
+                case InteractionKind.NightTask:
+                    if(item.nightAction==NightAction.Microwave) StartCoroutine(HeatMilk());
+                    else UseNightTask(item);
+                    break;
                 case InteractionKind.Note:
                     Read("사장이 남긴 메모", "오늘부터 야간 근무를 부탁해요.\n\n먼저 CCTV를 둘러보고, 이상한 게 보이면 직접 가서 확인해 주세요. 감시실 밖에서는 카메라를 볼 수 없어요.\n\nWASD / 방향키   이동 · CCTV 카메라 전환\nSpace   조사 / 상호작용\nTab   규칙서 열기 / 닫기\nShift   달리기     F   손전등\n1–5   소지품 선택 / 선택 해제\nEsc   뒤로 / 일시정지\n\n규칙서는 책상에 두었어요. 꼭 챙겨 읽어 주세요."); break;
                 case InteractionKind.RuleBook: OpenRules(); break;
                 case InteractionKind.Recipe:
                     Session.RecipeRead = true;
                     string order = string.Join("  →  ", Array.ConvertAll(tuning.recipe, GameTuning.IngredientName));
-                    Read("접힌 카페 레시피", "CAFÉ MOCHA\n\n아메리카노 베이스에 아래 재료를 하나씩 넣는다.\n\n★ " + order + " ★\n\n사장 메모: 순서가 바뀌면 맛이 달라져요.\n\n재료는 카운터 뒤 제조 공간에 보관.\n엉뚱한 재료는 넣지 말 것."); break;
+                    Read("접힌 카페 레시피", "CAFÉ MOCHA\n\n에스프레소에 초콜릿 소스를 먼저 녹이고 데운 우유를 섞는다.\n\n★ " + order + " ★\n\n사장 메모: 순서가 바뀌면 맛이 달라져요.\n\n우유는 전자레인지에서 90~120초 데운다.\n재료는 카운터 제조 공간에 보관.\n엉뚱한 재료는 넣지 말 것."); break;
                 case InteractionKind.Ingredient:
                     if (Session.Collect(item.ingredient)) Toast(item.title + "를 소지품에 넣었다. [" + ((int)item.ingredient + 1) + "]로 선택 / 해제.");
                     else Toast(Session.Phase == ShiftPhase.Incident ? "이미 가지고 있는 재료다." : "지금은 재료가 필요하지 않다.");
@@ -203,9 +213,9 @@ namespace NightCafe
                     if (!Session.CupInspected)
                     {
                         Session.CupInspected = true;
-                        Toast("쓴 커피 향. 우유도 시럽도 없는 아메리카노다. 컵 안에서 커피가 끝없이 솟는다.", 7);
+                        Toast("쓴 커피 향. 우유도 시럽도 없는 에스프레소다. 컵 안에서 커피가 끝없이 솟는다.", 7);
                     }
-                    else if (Session.SelectedSlot < 0 || !Session.Inventory[Session.SelectedSlot]) Toast("쓴 향의 아메리카노다. 주변의 종이와 규칙서를 살펴보자.", 5);
+                    else if (Session.SelectedSlot < 0 || !Session.Inventory[Session.SelectedSlot]) Toast("뜨겁고 쓴 에스프레소다. 주변의 종이와 규칙서를 살펴보자.", 5);
                     else StartCoroutine(Pour());
                     break;
                 case InteractionKind.Door:
@@ -235,7 +245,7 @@ namespace NightCafe
                 if (Session.Phase == ShiftPhase.Resolved)
                 {
                     floodAtResolution = Mathf.Clamp01(1 - Session.Remaining / tuning.incidentSeconds);
-                    Toast("흐름이 멈췄다. 바닥의 커피가 컵 안으로 빨려 들어간다…", 5);
+                    Toast("흐름이 멈췄다. 커피가 카페모카로 변하고 가루처럼 흩어진다…", 5);
                 }
                 else if (correct) Toast("재료가 섞였다. 흐름은 아직 멈추지 않았다.", 4);
                 else { sound.PlayOneShot(clatter); Toast("컵이 커피를 쏟아냈다! 시간이 줄었다. 투입 순서가 초기화됐다.", 5); }
@@ -245,6 +255,7 @@ namespace NightCafe
 
         public void SelectSlot(int index)
         {
+            if (Day >= 4) { SelectEvidence(index); return; }
             if (InputBlocked || laterShift != null) return;
             if (!Session.Inventory[index]) { Toast("아직 가지고 있지 않은 재료다.", 2); return; }
             Session.Select(index);
@@ -260,6 +271,7 @@ namespace NightCafe
 
         public void CloseOverlay()
         {
+            if(story != null && story.form != null) story.form.SetActive(false);
             if (overlay == Overlay.Detour)
             {
                 nightContent.detourGrid.SetActive(false);
@@ -276,6 +288,7 @@ namespace NightCafe
         public void OpenRules()
         {
             if (overlay != Overlay.None || pouring) return;
+            if (Day >= 4) { OpenAdvancedNotes(); return; }
             if (laterShift != null)
             {
                 view.readingTitle.text = "전 알바생의 노트";
@@ -305,10 +318,11 @@ namespace NightCafe
 
         public void SelectCamera(int index)
         {
-            cameraIndex = index;
+            cameraIndex = Mathf.Clamp(index,0,3);
             ViewShiftCamera(index);
             feedTitle.text = "CAM 0" + (index + 1) + "  /  " + ShiftCameraName(index);
             for (int i = 0; i < cameraButtons.Length; i++) cameraButtons[i].GetComponent<CafeButtonStyle>().Select(i == index);
+            if (Day >= 4) ObserveStoryCamera(index);
             if (laterShift == null && index == 0) Session.CameraViewed = true;
             if (laterShift != null && (Day == 2 ? index == 3 : index == (laterShift.Warehouse ? 2 : 0)))
                 laterShift.Viewed = true;
@@ -328,20 +342,24 @@ namespace NightCafe
             OpenOverlay(success ? Overlay.Complete : Overlay.Failure, success ? view.complete : view.failure);
             if (success) view.completeBody.text = "감시실 문을 닫자, 카페는 다시 조용해졌다.\n\n남은 시간  " + Mathf.CeilToInt(Session.Remaining) + "초     /     잘못된 투입  " + Session.Mistakes + "회";
             RefreshShiftResult(success);
+            if(Day>=4) RefreshAdvancedResult(success);
             menuButtons = success ? view.completeButtons : view.failureButtons;
             menuIndex = 0; MarkMenu();
         }
 
         public void Retry()
         {
+            if(Day>=4) { RetryAdvanced(); return; }
             if (laterShift != null)
             {
                 LoadShift(Day);
                 return;
             }
             StopAllCoroutines(); pouring = false;
+            failureStarted=-1;World.Player.transform.localScale=Vector3.one;
             World.Player.Reach(0);
             CloseOverlay(); Session.RetryIncident(); World.Player.Teleport(CafeWorld.IncidentSpawn);
+            cupAnimationTime = 0;
             foreach (var item in World.Interactables) if (item.kind == InteractionKind.Door) item.SetDoor(true);
             Toast("사건 시작 시점으로 돌아왔다. 재료와 컵, 커피 수위가 초기화됐다.", 5);
         }
@@ -364,24 +382,43 @@ namespace NightCafe
         {
             bool alive = Session.Phase == ShiftPhase.Surveillance || Session.Phase == ShiftPhase.Incident;
             World.Cup.position = World.CupOrigin + Vector3.up * (alive ? Mathf.Sin(pulseClock * 2.1f) * 0.25f : 0);
-            World.Cup.rotation = Quaternion.Euler(0, 0, alive ? pulseClock * (Session.SurgeRemaining > 0 ? 230 : 35) : 0);
+            bool hasCupFrame = World.PlayCupFrame(cupAnimationTime, Session.Phase);
+            World.Cup.rotation = Quaternion.Euler(0, 0, alive && !hasCupFrame ? pulseClock * (Session.SurgeRemaining > 0 ? 230 : 35) : 0);
+            cupAnimationTime += Time.deltaTime * (Session.SurgeRemaining > 0 ? 2.5f : 1);
             for (int i = 0; i < World.CoffeeDrops.Length; i++)
             {
                 var drop = World.CoffeeDrops[i];
-                drop.gameObject.SetActive(Session.Phase == ShiftPhase.Incident);
+                bool dust=Session.Phase==ShiftPhase.Resolved;
+                drop.gameObject.SetActive(Session.Phase == ShiftPhase.Incident || dust);
                 float travel = Mathf.Repeat(pulseClock * (Session.SurgeRemaining > 0 ? 2 : 0.8f) + i * 0.17f, 1);
                 float angle = i * 2.4f + pulseClock;
                 drop.position = World.Cup.position + new Vector3(Mathf.Cos(angle), Mathf.Sin(angle), 0) * travel * 1.8f;
                 drop.localScale = Vector3.one * (1 - travel * 0.6f);
+                if(dust)
+                {
+                    float amount=1-Session.Flood;
+                    drop.position=World.CupOrigin+new Vector3(Mathf.Cos(i*2.4f)*(1+amount),Mathf.Sin(i*2.4f)+amount*3,0);
+                    drop.localScale=Vector3.one*(1-amount)*2;
+                    drop.GetComponent<SpriteRenderer>().color=new Color(0.18f,0.065f,0.025f,1-amount);
+                }
+                else drop.GetComponent<SpriteRenderer>().color=new Color32(159,97,48,255);
             }
             float flood = Session.Phase == ShiftPhase.Resolved ? Session.Flood * floodAtResolution : Session.Phase == ShiftPhase.Complete ? 0 : Session.Flood;
-            World.Flood.color = new Color(0.28f, 0.12f, 0.03f, flood * 0.72f);
+            if(Session.Phase==ShiftPhase.Failed) flood=1;
+            World.Flood.color = Session.Phase == ShiftPhase.Resolved ? new Color(0.18f,0.065f,0.025f,flood*0.72f) : new Color(0.28f, 0.12f, 0.03f, flood * 0.72f);
             floodWarning.color = new Color(0.55f, 0.12f, 0.03f, Mathf.Max(0, flood - 0.65f) * (0.3f + 0.12f * Mathf.Sin(pulseClock * 4)));
             if (alive && pulseClock >= clatterAt && ((overlay == Overlay.Cctv && cameraIndex == 0) || Vector2.Distance(World.Player.transform.position, World.Cup.position) < 10))
             {
                 sound.PlayOneShot(clatter, overlay == Overlay.Cctv ? 0.7f : 0.4f);
                 clatterAt = pulseClock + (Session.SurgeRemaining > 0 ? 0.4f : 2.2f);
             }
+        }
+        private bool AnimateFirstFailure()
+        {
+            if(failureStarted<0) { failureStarted=Time.unscaledTime;CloseOverlay();sound.PlayOneShot(clatter,0.5f); }
+            float amount=Mathf.Clamp01((Time.unscaledTime-failureStarted)/tuning.cinematicSeconds);
+            World.Player.transform.localScale=new Vector3(1-amount*0.6f,1-amount*0.9f,1);
+            return amount>=1;
         }
 
         private void RefreshHud()
@@ -418,11 +455,8 @@ namespace NightCafe
         {
             Vector2 pos = World.Player.PlanPosition;
             mapCamera.cullingMask = CafeWorld.RoomMask(pos);
-            location.text = CafeWorld.RoomLayer(pos) switch
-            {
-                8 => "감시실", 9 => "로비", 11 => "창고", 12 => "숙직실",
-                14 => "촉수 복도", 15 => "추격 복도", _ => "카페 홀"
-            };
+            int room = CafeWorld.RoomLayer(pos);
+            location.text = room >= 8 ? CafeWorld.RoomNames[room-8] : "문 앞";
         }
 
         private void RefreshPrompt()
@@ -463,6 +497,7 @@ namespace NightCafe
             if (feed != null) { feed.Release(); Destroy(feed); }
             if (clatter != null) Destroy(clatter);
             if (scratch != null) Destroy(scratch);
+            if(sightMaterial != null) Destroy(sightMaterial);
         }
     }
 }

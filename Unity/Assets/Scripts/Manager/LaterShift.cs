@@ -5,7 +5,7 @@ namespace NightCafe
     public enum NightAction
     {
         None, Menu, EmptyCup, Sink, Warmer, Cloth, Chair, Board, Chalk, Eraser,
-        TentacleExit, ChaseEntrance, ChaseExit, ServiceDoor
+        TentacleExit, ChaseEntrance, ChaseExit, ServiceDoor, Travel, Microwave
     }
 
     public enum WaterState { None, Empty, Cold, Hot }

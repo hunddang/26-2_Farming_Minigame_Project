@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace NightCafe
 {
-    public enum InteractionKind { Camera, Note, RuleBook, Recipe, Cup, Ingredient, Door, Inspect, NightTask }
+    public enum InteractionKind { Camera, Note, RuleBook, Recipe, Cup, Ingredient, Door, Inspect, NightTask, Story }
 
     public sealed class CafeInteractable : MonoBehaviour
     {
@@ -12,6 +12,7 @@ namespace NightCafe
         public Ingredient ingredient;
         public NightAction nightAction;
         public int taskIndex;
+        public StoryAction storyAction;
         public bool isOpen;
         public bool securityDoor;
         [SerializeField] private SpriteRenderer marker;

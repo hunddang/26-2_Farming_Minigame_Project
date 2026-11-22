@@ -17,7 +17,8 @@ InGame
 │  ├─ Floor Plan                      공통 바닥·벽·문·방 이름
 │  ├─ Security Room                   감시실 가구·문서·CCTV
 │  ├─ Lobby
-│  ├─ Cafe Hall                       재료·컵·커피 효과·가구
+│  ├─ Cafe Hall                       컵·커피 효과·가구
+│  ├─ Counter                         재료·전자레인지
 │  ├─ Storage
 │  ├─ Night Room
 │  └─ Player                          [NightPlayer.prefab]
@@ -37,6 +38,7 @@ InGame
 │     ├─ Failure Overlay
 │     └─ Complete Overlay
 ├─ Night 02–03 Content                메뉴판·마감 소품·복도와 우회문 UI 참조
+├─ Nights 04–05 Content               추격·함정·최종 조사·영혼·시계·의자 참조
 ├─ Night Shift Controller             NightGame·튜닝·씬 참조
 ├─ Cameras
 │  ├─ Screen Background Camera        화면 전체 배경 초기화
@@ -60,6 +62,12 @@ HUD의 동적 글자는 `NightGameView` 필드 이름으로 연결되어 있습�
 기존 1일차 상태·재료 판정은 `ShiftSession`, 시간·이동·레시피 설정은 `Assets/Data/DayOneTuning.asset`에 유지됩니다. 규칙서·CCTV·메모 중 시간 진행, Esc 일시정지, 오답 페널티, 재도전 시 지식 유지 규칙도 유지했습니다.
 
 `InGame`의 `Night 02–03 Content`에서 메뉴판과 창고 칠판, 그림자, 두 복도를 편집합니다. 두 번째 밤의 CCTV 4번 채널은 로비, 세 번째 밤의 4번 채널은 촉수 복도를 표시합니다. 카메라 위치는 각 콘텐츠의 `CCTV framing` 참조를 조정합니다. 복도의 벽은 `BoxCollider2D`, 소품과 이상현상은 스프라이트, 칠판 글씨는 월드 공간 Canvas입니다.
+
+`Nights 04–05 Content`의 `Ceiling hunter`에는 소화기·포획 장비·방별 함정 표식과 낙하자가 있습니다. `Last shift restoration`에는 숫자·문서·명찰·제어함·배기구 상자·출구·영혼이 있습니다. 상호작용을 추가할 때는 해당 `NightStoryContent.Hunt Tasks` 또는 `Final Tasks` 배열에 등록하고, 위치에 맞는 방 레이어를 지정합니다. 함정의 Task Index는 설치 방 레이어 번호입니다.
+
+추가 조사 입력창(`Investigation form`), 회상과 엔딩(`Memory and ending`), 방향 시야(`Directional flashlight sight`)는 `Night Shift UI`의 씬 추가 오브젝트입니다. `NightStoryContent`가 패널과 버튼을 참조합니다. `FlashlightSight.mat`은 2D 화면 마스크용 재질입니다. 별도 CCTV 카메라 영상에는 마스크가 적용되지 않습니다.
+
+방 중심·범위·이름은 `CafeWorld`, 짝지은 문·도착점은 `NightRoutes.Portals`입니다. 월드는 방마다 구분된 XY 좌표를 사용하고 Space 상호작용으로 연결됩니다. `CafeWorld`의 크기를 수정할 때는 씬 가구·벽·문 도착점과 추격 경계도 함께 맞춰야 합니다. 현재 배치는 기획서의 잠정 연결 관계를 구현한 것이며 최종 타일 규격은 확정 전입니다.
 
 ## 아트 제작
 

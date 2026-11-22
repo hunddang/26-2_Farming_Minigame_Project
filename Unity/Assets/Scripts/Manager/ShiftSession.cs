@@ -17,6 +17,8 @@ namespace NightCafe
         public bool CameraViewed { get; set; }
         public bool[] Inventory { get; } = new bool[5];
         public int SelectedSlot { get; private set; } = -1;
+        public bool MilkHeated { get; private set; }
+        public float DiscoveryRemaining { get; private set; }
         public float Flood => Phase == ShiftPhase.Resolved || Phase == ShiftPhase.Complete
             ? CleanupRemaining / Math.Max(0.01f, Tuning.cleanupSeconds)
             : 1 - Remaining / Math.Max(1, Tuning.incidentSeconds);
@@ -25,6 +27,7 @@ namespace NightCafe
         {
             Tuning = tuning;
             Remaining = tuning.incidentSeconds;
+            DiscoveryRemaining = tuning.discoverySeconds;
         }
 
         public void StartIncident()
@@ -35,7 +38,12 @@ namespace NightCafe
         public void Tick(float seconds)
         {
             if (seconds <= 0) return;
-            if (Phase == ShiftPhase.Incident)
+            if (Phase == ShiftPhase.Surveillance)
+            {
+                DiscoveryRemaining = Math.Max(0, DiscoveryRemaining - seconds);
+                if (DiscoveryRemaining == 0) Phase = ShiftPhase.Failed;
+            }
+            else if (Phase == ShiftPhase.Incident)
             {
                 float boosted = Math.Min(seconds, SurgeRemaining);
                 Remaining = Math.Max(0, Remaining - seconds - boosted * (Tuning.surgeMultiplier - 1));
@@ -64,9 +72,8 @@ namespace NightCafe
         {
             if (Phase != ShiftPhase.Incident || SelectedSlot < 0 || !Inventory[SelectedSlot]) return false;
             Ingredient item = (Ingredient)SelectedSlot;
-            Inventory[SelectedSlot] = false;
             SelectedSlot = -1;
-            if (item != Tuning.recipe[RecipeStep])
+            if (item != Tuning.recipe[RecipeStep] || (item == Ingredient.Milk && !MilkHeated))
             {
                 RecipeStep = 0;
                 Mistakes++;
@@ -84,6 +91,13 @@ namespace NightCafe
             return true;
         }
 
+        public bool HeatMilk()
+        {
+            if (Phase != ShiftPhase.Incident || !Inventory[(int)Ingredient.Milk]) return false;
+            MilkHeated = true;
+            return true;
+        }
+
         public void ReturnToSecurity()
         {
             if (Phase == ShiftPhase.Resolved && CleanupRemaining <= 0) Phase = ShiftPhase.Complete;
@@ -96,6 +110,7 @@ namespace NightCafe
             SurgeRemaining = CleanupRemaining = 0;
             RecipeStep = Mistakes = 0;
             SelectedSlot = -1;
+            MilkHeated = false;
             Array.Clear(Inventory, 0, Inventory.Length);
         }
     }

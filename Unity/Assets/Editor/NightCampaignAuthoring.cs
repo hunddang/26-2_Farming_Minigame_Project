@@ -79,7 +79,7 @@ public static class NightCampaignAuthoring
     {
         var root = Group(content.transform, "Night 02 · Lobby menu");
         content.menuNight = root.gameObject;
-        var menu = Task(root, "로비 메뉴판", new Vector2(-10.1f, -1.7f), 9, NightAction.Menu);
+        var menu = Task(root, "로비 메뉴판", new Vector2(-11, -4.1f), 9, NightAction.Menu);
         Board(menu.transform, new Vector2(2.9f, 1.5f));
         content.menuBoard = menu;
         content.menuWriting = Writing(menu.transform, "…  /  …  /  …", new Color32(232, 79, 61, 255), 18);
@@ -92,20 +92,20 @@ public static class NightCampaignAuthoring
             mark.transform.localRotation = Quaternion.Euler(0, 0, -25 + i * 17 % 50);
         }
 
-        var hint = Notice(root, "메뉴판 아래 종이", new Vector2(-12.2f, -1.55f), 9,
+        var hint = Notice(root, "메뉴판 아래 종이", new Vector2(-13.5f, -4.2f), 9,
             "지워지지 않는 얼룩은 바로 문지르지 말고, 따뜻한 물을 묻힌 행주로 닦아야 한다.");
-        var cup = Task(root, "빈 컵", new Vector2(2, 6.8f), 10, NightAction.EmptyCup);
+        var cup = Task(root, "빈 컵", new Vector2(-1, 11), 13, NightAction.EmptyCup);
         AddTaskArt(cup, "cup", new Vector2(0.66f, 0.66f));
         content.cupPickup = cup.gameObject;
-        var sink = Task(root, "싱크대에서 물 받기", new Vector2(4.3f, 7.4f), 10, NightAction.Sink);
+        var sink = Task(root, "싱크대에서 물 받기", new Vector2(1.8f, 11), 13, NightAction.Sink);
         Fixture(sink, "Basin", new Color32(98, 140, 145, 255));
-        var warmer = Task(root, "컵 워머", new Vector2(6.4f, 7.4f), 10, NightAction.Warmer);
+        var warmer = Task(root, "컵 워머", new Vector2(4.6f, 11), 13, NightAction.Warmer);
         Fixture(warmer, "Heating plate", new Color32(216, 127, 64, 255));
-        var cloth = Task(root, "마른 행주", new Vector2(8.5f, 6.7f), 10, NightAction.Cloth);
+        var cloth = Task(root, "마른 행주", new Vector2(7.5f, 11), 13, NightAction.Cloth);
         AddTaskArt(cloth, "paper", new Vector2(0.64f, 0.48f));
         content.clothPickup = cloth.gameObject;
         content.menuTasks = new[] { menu, hint, cup, sink, warmer, cloth };
-        content.lobbyCctv = Group(root, "Lobby CCTV framing", new Vector3(-13, -4, -25));
+        content.lobbyCctv = Group(root, "Lobby CCTV framing", new Vector3(-14, -7, -25));
     }
 
     private static void CreateScratchHand(NightContent content)
@@ -148,25 +148,25 @@ public static class NightCampaignAuthoring
                 table = tables.OrderBy(t => (t.position - chair.position).sqrMagnitude).First()
             };
         }).ToArray();
-        var hallNotice = Notice(root, "홀 마감 안내", new Vector2(-4.85f, -2.4f), 10,
+        var hallNotice = Notice(root, "홀 마감 안내", new Vector2(-4, -4.1f), 10,
             "바닥 청소 전 모든 의자를 뒤집어 테이블 위에 올려 주세요.\n의자가 남아 있으면 마감이 완료되지 않은 것으로 처리합니다.");
-        var storageNotice = Notice(root, "창고 마감 점검표", new Vector2(14.1f, 7.15f), 11,
+        var storageNotice = Notice(root, "창고 마감 점검표", new Vector2(16.5f, 7.5f), 11,
             "영업 종료 후 칠판에는 ‘마감 완료’를 표시해 주세요.");
-        var board = Task(root, "창고 칠판", new Vector2(15.45f, 9.35f), 11, NightAction.Board);
+        var board = Task(root, "창고 칠판", new Vector2(18.5f, 9.4f), 11, NightAction.Board);
         content.chalkboard = board.transform;
         Board(board.transform, new Vector2(2.5f, 1.35f));
         content.chalkWriting = Writing(board.transform, "", CafeUi.Paper, 12);
-        var chalk = Task(root, "떠 있는 분필 잡기", new Vector2(16.55f, 8.65f), 11, NightAction.Chalk);
+        var chalk = Task(root, "떠 있는 분필 잡기", new Vector2(20.2f, 8.7f), 11, NightAction.Chalk);
         var chalkArt = Sprite(chalk.transform, "Chalk", Vector2.zero, new Vector2(0.34f, 0.115f), CafeUi.Paper, 10);
         chalk.ConfigureMarker(chalkArt);
         content.chalk = chalkArt.transform;
-        var eraser = Task(root, "칠판지우개", new Vector2(15.8f, 6.65f), 11, NightAction.Eraser);
+        var eraser = Task(root, "칠판지우개", new Vector2(18.5f, 6.5f), 11, NightAction.Eraser);
         var eraserArt = Sprite(eraser.transform, "Eraser", Vector2.zero, new Vector2(0.55f, 0.28f), new Color32(174, 124, 78, 255), 4);
         eraser.ConfigureMarker(eraserArt);
         Sprite(eraser.transform, "Felt", new Vector2(0, -0.10f), new Vector2(0.55f, 0.1f), CafeUi.Ink, 5);
         content.eraserPickup = eraser.gameObject;
         content.shadowTasks = new[] { hallNotice, storageNotice, board, chalk, eraser };
-        content.warehouseMark = Group(root, "Warehouse shadow position", new Vector3(14.5f, 8.85f, 0));
+        content.warehouseMark = Group(root, "Warehouse shadow position", new Vector3(17.2f, 8.9f, 0));
         content.shadow = Group(root, "Shadow");
         Shade(content.shadow, out content.shadowHead, out content.shadowEyes, false);
     }
@@ -175,62 +175,66 @@ public static class NightCampaignAuthoring
     {
         var routes = content.gameObject.AddComponent<NightRoutes>();
         content.routes = routes;
-        var root = Group(content.transform, "Night 03 · Passageways");
+        var root = Group(content.transform, "Rooms and Passageways");
         routes.routeObjects = root.gameObject;
-        CafeInteractable Door(Vector2 position) => world.Interactables.Where(i => i.kind == InteractionKind.Door)
-            .OrderBy(i => ((Vector2)i.transform.position - position).sqrMagnitude).First();
-        routes.hallDoor = Door(new Vector2(-7, -4));
-        routes.detourDoor = Door(new Vector2(13, 5));
-
-        CafeInteractable Portal(string title, float x, float y, int layer, NightAction action, int index)
+        var links = new System.Collections.Generic.List<NightRoutes.Portal>();
+        for(int layer=14;layer<=18;layer++)
         {
-            var portal = Task(root, title, new Vector2(x, y), layer, action);
-            portal.taskIndex = index;
-            AddTaskArt(portal, "door", new Vector2(1.08f, 0.38f));
-            Sprite(portal.transform, "Marker", new Vector2(0, 0.26f), new Vector2(0.56f, 0.10f), CafeUi.Amber, 5);
-            return portal;
-        }
-
-        Transform Corridor(string name, float x, int layer)
-        {
-            var hall = Group(root, name, new Vector3(x, 0, 0), layer);
-            var floor = Sprite(hall, "Floor", Vector2.zero, new Vector2(3.4f, 18.5f), new Color32(158, 169, 167, 255), -10, "floor-tile");
-            floor.drawMode = SpriteDrawMode.Tiled;
-            foreach (int sign in new[] { -1, 1 })
+            var hall = Group(root,CafeWorld.RoomNames[layer-8],CafeWorld.RoomCenter(layer),layer);
+            Vector2 size=CafeWorld.Sizes[layer-8];
+            var floor=Sprite(hall,"Floor",Vector2.zero,size,new Color32(144,158,153,255),-10,layer==16 ? "floor-wood" : "floor-tile");
+            floor.drawMode=SpriteDrawMode.Tiled;
+            foreach(int sign in new[]{-1,1})
             {
-                Wall(hall, new Vector2(1.62f * sign, 0), new Vector2(0.22f, 18.5f));
-                Wall(hall, new Vector2(0, 9.2f * sign), new Vector2(3.4f, 0.22f));
+                Wall(hall,new Vector2(sign*size.x/2,0),new Vector2(0.25f,size.y));
+                Wall(hall,new Vector2(0,sign*size.y/2),new Vector2(size.x,0.25f));
             }
-            for (int y = -6; y <= 6; y += 6)
-                Sprite(hall, "Guide light", new Vector2(1.45f, y), new Vector2(0.1f, 0.64f), CafeUi.Amber, 5);
-            return hall;
+            for(int x=-(int)size.x/2+2;x<size.x/2;x+=4)
+                Sprite(hall,"Guide light",new Vector2(x,-size.y/2+0.3f),new Vector2(0.6f,0.08f),CafeUi.Amber,3);
         }
-
-        var tentacleHall = Corridor("Tentacle passage", 40, 14);
-        var pursuitHall = Corridor("Pursuit passage", 48, 15);
-        routes.entrances = new[]
+        CafeInteractable Portal(string title,Vector2 position,int layer)
         {
-            Portal("추격 복도 · 카운터 방향", -11.5f, -7.8f, 9, NightAction.ChaseEntrance, 0),
-            Portal("추격 복도 · 로비 방향", -0.3f, 7.45f, 10, NightAction.ChaseEntrance, 1),
-            Portal("창고로 가는 외부 통로", -14.4f, -9.2f, 9, NightAction.ServiceDoor, 0),
-            Portal("로비로 가는 외부 통로", 15f, 3.6f, 11, NightAction.ServiceDoor, 1),
-            Portal("로비 출구", 40, -8.2f, 14, NightAction.TentacleExit, 0),
-            Portal("홀 출구", 40, 8.2f, 14, NightAction.TentacleExit, 1),
-            Portal("로비 출구", 48, -8.2f, 15, NightAction.ChaseExit, 0),
-            Portal("카운터 출구", 48, 8.2f, 15, NightAction.ChaseExit, 1)
-        };
-        routes.tentacles = new[] { -3.8f, 0, 3.8f }.Select(y =>
+            var item=Task(root,title,position,layer,NightAction.Travel);
+            item.kind=InteractionKind.Door;
+            AddTaskArt(item,"door",new Vector2(0.9f,0.6f));
+            return item;
+        }
+        void Connect(int from,Vector2 a,int to,Vector2 b,bool puzzle=false)
         {
-            var arm = Group(tentacleHall, "Tentacle pivot", new Vector3(-1.38f, y, 0));
-            Sprite(arm, "Tentacle", new Vector2(0.11f, 1.37f), new Vector2(0.52f, 2.95f), new Color32(105, 57, 81, 255), 5, "circle");
-            for (int i = 1; i <= 5; i++)
-                Sprite(arm, "Sucker", new Vector2(0.23f, i * 0.44f), Vector2.one * (0.22f - 0.018f * i), new Color32(192, 103, 103, 255), 6, "circle");
+            var left=Portal(CafeWorld.RoomNames[to-8]+(puzzle ? " · 쓰레기 처리 우회문" : " 문"),a,from);
+            var right=Portal(CafeWorld.RoomNames[from-8]+(puzzle ? " · 쓰레기 처리 우회문" : " 문"),b,to);
+            left.taskIndex=links.Count;
+            links.Add(new NightRoutes.Portal { item=left, target=b+(CafeWorld.RoomCenter(to)-b).normalized*0.85f, paired=right, puzzle=puzzle });
+            right.taskIndex=links.Count;
+            links.Add(new NightRoutes.Portal { item=right, target=a+(CafeWorld.RoomCenter(from)-a).normalized*0.85f, paired=left, puzzle=puzzle });
+        }
+        Connect(8,new Vector2(-14,3.4f),9,new Vector2(-18,-3.4f));
+        Connect(9,new Vector2(-19,-6),11,new Vector2(16,4.4f));
+        Connect(9,new Vector2(-18,-10.4f),12,new Vector2(16,-4.2f));
+        Connect(9,new Vector2(-8.5f,-5),15,new Vector2(81.2f,0));
+        Connect(15,new Vector2(98.8f,0),13,new Vector2(-2.6f,7));
+        Connect(9,new Vector2(-8.5f,-9.5f),14,new Vector2(34.2f,0));
+        Connect(14,new Vector2(49.8f,0),10,new Vector2(-5.3f,-5));
+        Connect(11,new Vector2(24.2f,4),17,new Vector2(107.2f,0),true);
+        Connect(17,new Vector2(122.8f,0),13,new Vector2(-2.6f,12));
+        Connect(12,new Vector2(24.2f,-5),18,new Vector2(132.2f,0),true);
+        Connect(18,new Vector2(147.8f,0),10,new Vector2(-5.3f,-11.5f));
+        Connect(13,new Vector2(8.8f,6.8f),16,new Vector2(58,3));
+        Connect(10,new Vector2(11.3f,-10.5f),16,new Vector2(58,-3));
+        routes.portals=links.ToArray();
+        routes.entrances=links.Select(link=>link.item).ToArray();
+        routes.hallDoor=links[10].item;
+        routes.detourDoor=links[14].item;
+        routes.tentacles=new[]{-4f,0,4f}.Select(x=>
+        {
+            var arm=Group(root,"Tentacle pivot",new Vector3(42+x,-2.8f,0),14);
+            Sprite(arm,"Tentacle",new Vector2(0,1.3f),new Vector2(0.55f,3.1f),new Color32(105,57,81,255),5,"circle");
+            for(int i=1;i<=5;i++) Sprite(arm,"Sucker",new Vector2(0.2f,i*0.47f),Vector2.one*0.18f,new Color32(192,103,103,255),6,"circle");
             return arm;
         }).ToArray();
-        routes.tentacleCamera = Group(tentacleHall, "Passage CCTV framing", new Vector3(0, 0, -25));
-        routes.pursuer = Group(pursuitHall, "Pursuer");
-        Shade(routes.pursuer, out _, out _, true);
-        root.gameObject.SetActive(false);
+        routes.tentacleCamera=Group(root,"Passage CCTV framing",new Vector3(42,0,-25),14);
+        routes.pursuer=Group(root,"Pursuer",new Vector3(80.8f,0,0),15);
+        Shade(routes.pursuer,out _,out _,true);
     }
 
     private static void Shade(Transform root, out Transform head, out Transform eyes, bool pursuit)
