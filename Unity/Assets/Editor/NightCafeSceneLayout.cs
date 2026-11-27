@@ -69,10 +69,6 @@ internal static class NightCafeSceneLayout
         foreach (var tentacle in routes.tentacles) tentacle.SetParent(hazards, true);
         foreach (var warning in routes.tentacleWarnings) warning.transform.SetParent(hazards, true);
 
-        NameLabel(game.view.objective, "Objective");
-        NameLabel(game.view.timer, "Shift Timer");
-        NameLabel(game.view.status, "Incident Status");
-        NameLabel(game.view.progress, "Checklist");
         NameLabel(game.view.toast, "Feedback Message");
         NameLabel(game.view.prompt, "Interaction Prompt");
         NameLabel(game.view.feedTitle, "Camera Channel and Time");

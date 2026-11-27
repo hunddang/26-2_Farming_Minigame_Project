@@ -13,6 +13,7 @@ using UnityEngine.UI;
 public static class CafeSceneAuthoring
 {
     private const string Art = "Assets/Art/NightCafe/";
+    private const string PlayerArt = Art + "Player/";
     private const string Prefabs = "Assets/Prefabs/";
     public static Sprite Sprite(string name) => AssetDatabase.LoadAssetAtPath<Sprite>(Art + name + ".png");
 
@@ -23,6 +24,7 @@ public static class CafeSceneAuthoring
         for (int i = 0; i < SceneManager.sceneCount; i++)
             if (SceneManager.GetSceneAt(i).isDirty) throw new InvalidOperationException("Save your open scenes before rebuilding.");
         ImportSprites();
+        CafeMapArt.ImportSprites();
         Directory.CreateDirectory(Prefabs);
         Directory.CreateDirectory("Assets/Data");
         Directory.CreateDirectory("Assets/Scenes");
@@ -50,8 +52,8 @@ public static class CafeSceneAuthoring
         background.transform.SetParent(cameras);
         background.cullingMask = 0; background.depth = -1;
         background.allowHDR = false; background.allowMSAA = false;
-        var playViewport = new Rect(0.01f, 0.13f, 0.775f, 0.75f);
-        float playZoom = 1080 * playViewport.height / (2 * CafeWorld.PixelsPerTile);
+        var playViewport = new Rect(0, 0, 1, 1);
+        float playZoom = 1080f / (2 * CafeWorld.PixelsPerTile);
         game.mapCamera = MakeCamera("Map Camera", playZoom, playViewport, true);
         game.mapCamera.transform.SetParent(cameras);
         game.mapCamera.transform.position = new Vector3(world.Player.transform.position.x, world.Player.transform.position.y, -30);
@@ -77,7 +79,9 @@ public static class CafeSceneAuthoring
         CafeCctvAuthoring.DrawLinks(hud, UnityEngine.Object.FindFirstObjectByType<NightRoutes>().portals);
         NightStoryAuthoring.Attach(game);
         NightCafeSceneLayout.Organize(game);
+        CafeInventoryAuthoring.ConfigurePlayViewport(game);
         NightCafeSceneLayout.ApplyLook(game.gameObject.scene.GetRootGameObjects());
+        CafeMapArt.ApplyRoutes(UnityEngine.Object.FindFirstObjectByType<NightRoutes>());
         EditorSceneManager.SaveScene(scene, "Assets/Scenes/InGame.unity");
         EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene("Assets/Scenes/Lobby.unity", true), new EditorBuildSettingsScene("Assets/Scenes/InGame.unity", true) };
         AssetDatabase.SaveAssets();
@@ -89,13 +93,13 @@ public static class CafeSceneAuthoring
     internal static void ImportSprites()
     {
         AssetDatabase.Refresh();
-        foreach (string file in Directory.GetFiles(Art, "*.png"))
+        foreach (string file in Directory.GetFiles(Art, "*.png").Concat(Directory.GetFiles(PlayerArt, "*.png")))
         {
             string path = file.Replace('\\', '/');
             var importer = (TextureImporter)AssetImporter.GetAtPath(path);
             importer.textureType = TextureImporterType.Sprite;
             importer.spriteImportMode = SpriteImportMode.Single;
-            importer.spritePixelsPerUnit = 64;
+            importer.spritePixelsPerUnit = path.StartsWith(PlayerArt, StringComparison.Ordinal) ? 256 : 64;
             importer.spriteBorder = Path.GetFileNameWithoutExtension(path) is "panel" or "button" or "button-selected" or "paper" ? new Vector4(6,6,6,6) : Vector4.zero;
             var settings = new TextureImporterSettings(); importer.ReadTextureSettings(settings);
             settings.spriteMeshType = SpriteMeshType.FullRect; importer.SetTextureSettings(settings);
@@ -158,27 +162,6 @@ public static class CafeSceneAuthoring
         return CafeUiAuthoring.Panel(shade.transform, name + " Panel", (1920-width)/2, (1080-height)/2, width, height, Color.white).transform;
     }
 
-    private static void OrganizeHud(Transform root)
-    {
-        var children = root.Cast<Transform>().ToArray();
-        var header = CafeUiAuthoring.Rect(root, "Header", 0, 0, 1920, 1080);
-        var inventory = CafeUiAuthoring.Rect(root, "Inventory", 0, 0, 1920, 1080);
-        var interaction = CafeUiAuthoring.Rect(root, "Interaction Feedback", 0, 0, 1920, 1080);
-        var overlays = CafeUiAuthoring.Rect(root, "Overlays", 0, 0, 1920, 1080);
-        foreach (var child in children)
-        {
-            var rect = (RectTransform)child;
-            Transform parent;
-            if (child.name.EndsWith("Overlay")) parent = overlays;
-            else if (child.name == "Shift record") { child.name = "Shift Record"; continue; }
-            else if (rect.anchoredPosition.y <= -957) parent = inventory;
-            else if (child.name == "Flood tint" || rect.anchoredPosition.y <= -830) parent = interaction;
-            else parent = header;
-            rect.SetParent(parent, false);
-        }
-        overlays.SetAsLastSibling();
-    }
-
     private static CafeWorld BuildWorld()
     {
         var source = new CafeWorldAuthoring(true);
@@ -210,8 +193,6 @@ public static class CafeSceneAuthoring
             if (name == "Supply crates") key = "exhaust-crate";
             if (name == "Bed") key = "bed";
             if (name == "Plant") key = "plant";
-            if (name == "Player") key = "player-body";
-            if (name == "Head") key = "player-head";
             var item = renderer.GetComponent<CafeInteractable>();
             if (item != null)
             {
@@ -248,8 +229,10 @@ public static class CafeSceneAuthoring
         }
         ConfigureCup(world);
         // Serialize the player and common furniture as reusable nested prefabs.
+        ConfigurePlayerAppearance(world.Player);
         SavePrefab(world.Player.gameObject, "NightPlayer");
         var table = renderers.First(r => r.name == "Cafe table");
+        CafeMapArt.ApplyTable(table);
         SavePrefab(table.gameObject, "CafeTable");
         foreach (Transform child in world.transform.Cast<Transform>().ToArray())
         {
@@ -259,10 +242,41 @@ public static class CafeSceneAuthoring
         }
         NightCafeSceneLayout.OrganizeRooms(world);
         NightCafeSceneLayout.ApplyLook(new[] { world.gameObject });
+        CafeMapArt.ApplyWorld(world);
+        CafeLightingAuthoring.AddFlashlightPickup(world);
         world.GetComponent<CafeFont>().overrideFont = AssetDatabase.LoadAssetAtPath<Font>("Assets/Art/Fonts/NanumGothic-Regular.ttf");
         world.GetComponent<CafeFont>().Refresh();
         SavePrefab(world.gameObject, "CafeWorld");
         return world;
+    }
+
+    internal static void ConfigurePlayerAppearance(NightPlayer player)
+    {
+        var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(PlayerArt + "human.png");
+        if (sprite == null) throw new InvalidOperationException("The player appearance needs the imported human sprite.");
+
+        Transform art = player.transform.Find("Appearance") ?? player.transform.Find("Head");
+        if (art == null)
+        {
+            art = new GameObject("Appearance").transform;
+            art.SetParent(player.transform, false);
+        }
+        art.name = "Appearance";
+        var renderer = art.GetComponent<SpriteRenderer>();
+        if (renderer == null) renderer = art.gameObject.AddComponent<SpriteRenderer>();
+        renderer.drawMode = SpriteDrawMode.Simple;
+        renderer.sprite = sprite;
+        renderer.color = Color.white;
+        renderer.sortingOrder = 9;
+        const float appearanceScale = 1.3f;
+        art.localScale = new Vector3(appearanceScale, appearanceScale, 1f);
+        art.localPosition = Vector3.up * (sprite.bounds.extents.y * appearanceScale - .3f);
+        var placeholder = player.GetComponent<SpriteRenderer>();
+        if (placeholder != null) UnityEngine.Object.DestroyImmediate(placeholder);
+
+        var serialized = new SerializedObject(player);
+        serialized.FindProperty("appearance").objectReferenceValue = renderer;
+        serialized.ApplyModifiedPropertiesWithoutUndo();
     }
 
     internal static void ConfigureCup(CafeWorld world)
@@ -284,7 +298,7 @@ public static class CafeSceneAuthoring
     {
         if (world.Player == null || world.Cup == null || world.Flood == null || world.Interactables.Count(i => i.kind == InteractionKind.Ingredient) != 5)
             throw new InvalidOperationException("World references are incomplete.");
-        if (view.inventoryButtons.Length != 5 || view.cameraButtons.Length != CafeWorld.CameraRooms.Length || view.completeBody == null)
+        if (view.inventory.cells.Length != NightGame.InventoryCapacity || view.cameraButtons.Length != CafeWorld.CameraRooms.Length || view.completeBody == null)
             throw new InvalidOperationException("UI references are incomplete.");
         foreach (var text in view.GetComponentsInChildren<Text>(true))
             if (text.font == null) throw new InvalidOperationException("Missing font: " + text.name);
@@ -316,8 +330,8 @@ public static class CafeSceneAuthoring
             var shade = CafeUiAuthoring.Panel(root, "Help", 0, 0, 1920, 1080, new Color(0.02f, 0.04f, 0.05f, 0.96f));
             shade.raycastTarget = true; start.helpPanel = shade.gameObject;
             CafeUiAuthoring.Label(shade.transform, "근무 조작 안내", 400, 175, 1120, 80, 46, CafeUi.Amber);
-            CafeUiAuthoring.Label(shade.transform, "WASD / 방향키     이동 · CCTV 카메라 전환\nSpace                    조사 · 상호작용 · 선택\nShift                      달리기\nF                            손전등 켜기 / 끄기\nTab                        규칙서 열기 / 닫기\n1–5                        소지품 선택 / 선택 해제\nE                           의자 빼 주기\nR                           우회문 퍼즐 초기화\nEsc                        뒤로 · 일시정지\n마우스                   CCTV · 메뉴 · 소지품 선택", 400, 300, 1120, 430, 29);
-            CafeUiAuthoring.Label(shade.transform, "규칙서와 메모를 읽는 동안에도 시간은 흐릅니다.\nEsc 일시정지 메뉴에서는 시간이 멈춥니다.", 400, 762, 1120, 90, 24, CafeUi.Muted);
+            CafeUiAuthoring.Label(shade.transform, "WASD / 방향키     이동 · CCTV 카메라 전환\nSpace                    조사 · 상호작용 · 선택\nShift                      달리기\nF                            장비한 손전등 전원\nTab                        인벤토리 열기 / 닫기\n우클릭                   아이템 장착 · 손/장비 칸에서 해제\nE                           의자 빼 주기\nR                           우회문 퍼즐 초기화\nEsc                        뒤로 · 일시정지\n좌클릭 드래그      인벤토리 아이템 이동", 400, 300, 1120, 430, 29);
+            CafeUiAuthoring.Label(shade.transform, "규칙서와 메모를 읽는 동안에도 시간은 흐릅니다.\nTab 인벤토리와 Esc 일시정지 메뉴에서는 시간이 멈춥니다.", 400, 762, 1120, 90, 24, CafeUi.Muted);
             start.closeHelpButton = CafeUiAuthoring.Button(shade.transform, "돌아가기  [Space / Esc]", 1060, 890, 460, 74, null);
 
             start.helpPanel.SetActive(false);
@@ -330,74 +344,33 @@ public static class CafeSceneAuthoring
 
     private static NightGameView BuildHud()
     {
+        var canvas = CafeUiAuthoring.Canvas("Night Shift UI");
+        var view = canvas.gameObject.AddComponent<NightGameView>();
+        canvas.gameObject.AddComponent<CafeFont>();
+        var root = canvas.transform;
 
-            var canvas = CafeUiAuthoring.Canvas("Night Shift UI");
-            var view = canvas.gameObject.AddComponent<NightGameView>();
-            canvas.gameObject.AddComponent<CafeFont>();
-            view.inventorySlots = new Image[5]; view.inventoryLabels = new Text[5]; view.inventoryButtons = new Button[5];
-            var root = canvas.transform;
-            CafeUiAuthoring.Panel(root, "Header", 0, 0, 1920, 108, CafeUi.Ink);
-            CafeUiAuthoring.Label(root, "NIGHT SHIFT  /  01", 48, 22, 500, 38, 28, CafeUi.Amber);
-            CafeUiAuthoring.Label(root, "이상현상 관찰 기록", 48, 65, 500, 28, 18, CafeUi.Muted);
-            view.timer = CafeUiAuthoring.Label(root, "", 740, 15, 440, 55, 42, CafeUi.Amber, TextAnchor.MiddleCenter);
-            view.timerLine = CafeUiAuthoring.Panel(root, "Timer line", 740, 83, 440, 3, CafeUi.Amber);
-            view.location = CafeUiAuthoring.Label(root, "감시실", 1250, 40, 200, 40, 24, CafeUi.Paper, TextAnchor.MiddleRight);
-            view.pauseButton = CafeUiAuthoring.Button(root, "일시정지  [Esc]", 1512, 24, 360, 60, null);
-
-            var sidebar = CafeUiAuthoring.Panel(root, "Shift record", 1512, 130, 360, 746, new Color32(23, 37, 41, 255)).transform;
-            CafeUiAuthoring.Label(sidebar, "야간 근무", 28, 28, 304, 32, 20, CafeUi.Amber);
-            CafeUiAuthoring.Label(sidebar, "첫 번째 밤", 28, 72, 304, 60, 36);
-            CafeUiAuthoring.Panel(sidebar, "Divider", 28, 151, 304, 1, new Color32(68, 88, 84, 255));
-            CafeUiAuthoring.Label(sidebar, "현재 할 일", 28, 177, 304, 32, 19, CafeUi.Muted);
-            view.objective = CafeUiAuthoring.Label(sidebar, "", 28, 223, 304, 122, 27);
-            view.status = CafeUiAuthoring.Label(sidebar, "", 28, 370, 304, 90, 20, CafeUi.Green);
-            view.progress = CafeUiAuthoring.Label(sidebar, "", 28, 473, 304, 88, 20, CafeUi.Muted);
-            view.rulesButton = CafeUiAuthoring.Button(sidebar, "규칙서 열기  [Tab]", 24, 580, 312, 64, null);
-            CafeUiAuthoring.Label(sidebar, "WASD 이동 · Shift 달리기\nSpace 조사 · F 손전등\n1–5 재료 선택 / 선택 해제", 28, 666, 308, 75, 17, CafeUi.Muted);
-
-            view.floodWarning = CafeUiAuthoring.Panel(root, "Flood tint", 0, 108, 1490, 825, new Color(0.6f, 0.2f, 0.04f, 0));
-            view.prompt = CafeUiAuthoring.Label(root, "", 240, 842, 1020, 50, 25, CafeUi.Amber, TextAnchor.MiddleCenter);
-            view.toast = CafeUiAuthoring.Label(root, "", 60, 895, 1400, 48, 22, CafeUi.Paper, TextAnchor.MiddleCenter);
-            CafeUiAuthoring.Panel(root, "Inventory bar", 0, 957, 1920, 123, CafeUi.Ink);
-            CafeUiAuthoring.Label(root, "소지품", 48, 995, 130, 44, 24, CafeUi.Muted);
-            for (int i = 0; i < 5; i++)
-            {
-                int slot = i;
-                var button = CafeUiAuthoring.Button(root, "", 214 + i * 248, 978, 230, 78, null);
-                view.inventoryButtons[i] = button;
-                view.inventorySlots[i] = button.GetComponent<Image>();
-                view.inventoryLabels[i] = CafeUiAuthoring.Label(button.transform, "", 18, 0, 200, 78, 22, null, TextAnchor.MiddleLeft);
-            }
-            CafeUiAuthoring.Label(root, "선택 후 컵 앞에서 Space\n같은 번호를 누르면 조사 모드", 1512, 986, 370, 64, 19, CafeUi.Muted);
-
-            view.rules = BuildRules(root, view);
-            view.reading = BuildReading(root, view);
-            view.cctv = BuildCCTV(root, view);
-            view.pause = BuildPause(root, view);
-            view.failure = BuildResult(root, view, false);
-            view.complete = BuildResult(root, view, true);
-            view.closeButtons = new[] { view.rules, view.reading, view.cctv }.Select(panel => panel.GetComponentInChildren<Button>(true)).ToArray();
-            // CCTV camera selectors precede its close button in hierarchy order.
-            view.closeButtons[2] = view.cctv.GetComponentsInChildren<Button>(true).Last();
-            for (int i = 0; i < 5; i++)
-            {
-                var button = view.inventoryButtons[i]; button.name = "Inventory Slot " + (i+1);
-                var icon = ArtImage(button.transform, "Ingredient artwork", new[] { "milk","chocolate","almond","tapioca","cream" }[i], 10, 12, 38, 52);
-                icon.preserveAspect = true;
-                view.inventoryLabels[i].rectTransform.anchoredPosition = new Vector2(56,0);
-                view.inventoryLabels[i].rectTransform.sizeDelta = new Vector2(170,78);
-                view.inventoryLabels[i].fontSize = 20;
-                view.inventoryLabels[i].text = (i+1) + "  " + GameTuning.IngredientName((Ingredient)i) + "  —";
-            }
-            view.objective.text = "CCTV를 확인하고\n카페를 둘러보세요.";
-            view.status.text = "카메라 대기 중";
-            view.progress.text = "○ CCTV 확인\n○ 컵 조사\n○ 레시피 열람";
-            view.timer.text = "03:00";
-            StyleUi(root);
-            OrganizeHud(root);
-            SavePrefab(canvas.gameObject, "NightGameUI");
-            return view;
+        var feedback = CafeUiAuthoring.Rect(root, "Interaction Feedback", 0, 0, 1920, 1080);
+        view.floodWarning = CafeUiAuthoring.Panel(feedback, "Flood tint", 0, 0, 1920, 1080, new Color(0.6f, 0.2f, 0.04f, 0));
+        view.prompt = CafeUiAuthoring.Label(feedback, "", 450, 935, 1020, 50, 25, CafeUi.Amber, TextAnchor.MiddleCenter);
+        view.toast = CafeUiAuthoring.Label(feedback, "", 260, 985, 1400, 62, 22, CafeUi.Paper, TextAnchor.MiddleCenter);
+        var overlays = CafeUiAuthoring.Rect(root, "Overlays", 0, 0, 1920, 1080);
+        view.rules = BuildRules(overlays, view);
+        view.reading = BuildReading(overlays, view);
+        view.cctv = BuildCCTV(overlays, view);
+        view.pause = BuildPause(overlays, view);
+        view.failure = BuildResult(overlays, view, false);
+        view.complete = BuildResult(overlays, view, true);
+        view.closeButtons = new[] {
+            view.rules.GetComponentInChildren<Button>(true),
+            view.reading.GetComponentInChildren<Button>(true),
+            view.cctv.GetComponentsInChildren<Button>(true).Last()
+        };
+        StyleUi(root);
+        CafeInventoryAuthoring.Build(view);
+        SavePrefab(canvas.gameObject, "NightGameUI");
+        return view;
     }
+
         private static GameObject BuildRules(Transform root, NightGameView view)
         {
             var body = Overlay(root, "Rules", 1060, 800, out var panel);
@@ -409,8 +382,8 @@ public static class CafeSceneAuthoring
             CafeUiAuthoring.Label(body, "02", 64, 380, 100, 50, 28, CafeUi.Amber);
             CafeUiAuthoring.Label(body, "카페모카는 너무 끈적해서 목이 막힌다.", 150, 380, 800, 70, 30);
             CafeUiAuthoring.Label(body, "관찰한 것을 기억할 것.\n레시피는 카페에 보관한다.", 64, 520, 900, 100, 23, CafeUi.Muted);
-            CafeUiAuthoring.Label(body, "읽는 동안에도 사건은 계속됩니다.", 64, 676, 680, 40, 21, CafeUi.Amber);
-            CafeUiAuthoring.Button(body, "덮기  [Tab / Esc / Space]", 580, 714, 416, 60, null);
+            CafeUiAuthoring.Label(body, "Tab 인벤토리   ·   읽는 동안에도 사건은 계속됩니다.", 64, 676, 680, 40, 21, CafeUi.Amber);
+            CafeUiAuthoring.Button(body, "덮기  [Esc / Space]", 580, 714, 416, 60, null);
 
             panel.SetActive(false);
             return panel;

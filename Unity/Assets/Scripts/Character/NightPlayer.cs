@@ -8,10 +8,12 @@ namespace NightCafe
     {
         public NightGame Game { get; set; }
         public Vector2 Facing { get; private set; } = Vector2.down;
-        public bool FlashlightOn { get; private set; } = true;
+        public bool FlashlightOn => Game != null && Game.FlashlightEquipped && flashlightPower;
         private Rigidbody2D body;
-        public Transform flashlight;
+        [SerializeField] private SpriteRenderer appearance;
+        private bool flashlightPower;
         private Vector2 movement;
+        private Vector3 appearanceRestPosition;
 
         public Vector2 PlanPosition => transform.position;
 
@@ -30,7 +32,7 @@ namespace NightCafe
             body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
             body.interpolation = RigidbodyInterpolation2D.Interpolate;
             GetComponent<CircleCollider2D>().radius = 0.31f;
-
+            if (appearance != null) appearanceRestPosition = appearance.transform.localPosition;
         }
 
         private void Update()
@@ -44,15 +46,21 @@ namespace NightCafe
             if (keys.dKey.isPressed || keys.rightArrowKey.isPressed) movement.x++;
             movement = Game.FilterDirection(movement, Facing);
             if (movement.sqrMagnitude > 0) Facing = movement;
-            if (keys.fKey.wasPressedThisFrame) FlashlightOn = !FlashlightOn;
-            flashlight.gameObject.SetActive(FlashlightOn);
-            flashlight.rotation = Quaternion.Euler(0, 0, Mathf.Atan2(Facing.y, Facing.x) * Mathf.Rad2Deg - 90);
+            if (keys.fKey.wasPressedThisFrame && Game.FlashlightEquipped) SetFlashlightPower(!flashlightPower);
             movement *= Game.Tuning.moveSpeed * (keys.leftShiftKey.isPressed ? Game.Tuning.runMultiplier : 1);
         }
+
+        internal void SetFlashlightPower(bool on) => flashlightPower = on;
 
         private void FixedUpdate()
         {
             if (Game != null && !Game.InputBlocked) body.MovePosition(body.position + movement * Time.fixedDeltaTime);
+        }
+
+        private void LateUpdate()
+        {
+            if (appearance != null && Facing.x != 0 && Mathf.Abs(Facing.x) >= Mathf.Abs(Facing.y))
+                appearance.flipX = Facing.x < 0;
         }
 
         public void Teleport(Vector2 position)
@@ -64,8 +72,14 @@ namespace NightCafe
 
         public void Reach(float progress)
         {
+            float lift = Mathf.Sin(progress * Mathf.PI) * 0.18f;
+            if (appearance != null)
+            {
+                appearance.transform.localPosition = appearanceRestPosition + Vector3.up * lift;
+                return;
+            }
             var head = transform.Find("Head");
-            if (head != null) head.localPosition = new Vector3(0, 0.16f + Mathf.Sin(progress * Mathf.PI) * 0.18f, 0);
+            if (head != null) head.localPosition = new Vector3(0, 0.16f + lift, 0);
         }
     }
 }

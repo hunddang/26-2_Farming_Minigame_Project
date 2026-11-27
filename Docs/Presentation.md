@@ -6,11 +6,13 @@ Unity 메뉴에서 `Night Cafe → 편집 도구`를 열면 씬, 프리팹, 설�
 | --- | --- |
 | 시작 화면과 버튼 | `Lobby → Start Screen UI`. `Navigation`에는 버튼, `Help`에는 조작 안내가 있습니다. |
 | 방의 바닥·벽·가구·소품 | `CafeWorld.prefab → 해당 방 → Floor & Walls / Furniture / Interactions / Effects` |
+| 주인공 스프라이트 | `NightPlayer.prefab → Appearance`의 Sprite Renderer. 원본에서 추출한 `Assets/Art/NightCafe/Player/human.png`를 사용합니다. |
 | 1일차 컵과 커피 | `CafeWorld.prefab → Cafe Hall`. `CafeWorld`의 `Cup Frames`가 컵의 애니메이션 순서입니다. |
 | 2~5일차 소품과 괴물 | `InGame → Night Events`. 사건별 부모 아래에 소품과 효과가 들어 있습니다. |
 | 문 위치와 도착점 | `InGame → Passages & Doors → Rooms and Passageways → Doors by Room / Arrivals by Room` |
 | 지름길 복도 | 같은 `Rooms and Passageways` 아래의 `홀 연결 복도`와 `카운터 연결 복도`에서 벽과 안내판을 편집합니다. `Corridor Hazards`에는 복도 이벤트 오브젝트가 있습니다. |
-| 화면과 팝업 | `NightGameUI.prefab`의 `Header`, `Shift Record`, `Inventory`, `Interaction Feedback`, `Overlays`. 5일차 조사 및 엔딩 패널은 `InGame → Night Shift UI → Night 05 UI`에 있습니다. |
+| 화면과 팝업 | `NightGameUI.prefab`의 `Hand and Equipment HUD`, `Inventory Overlay`, `Interaction Feedback`, `Overlays`. 5일차 조사 및 엔딩 패널은 `InGame → Night Shift UI → Night 05 UI`에 있습니다. |
+| 손전등과 감시실 문 조명 | 손전등은 `CafeWorld.prefab → Security Room → Interactions`, 빨간 등은 `InGame → Passages & Doors → Rooms and Passageways → Doors by Room → 로비 → 감시실 문` 아래에 있습니다. |
 | CCTV 영상과 평면도 | `Night Shift UI → Overlays → CCTV Overlay`의 `Camera Map`과 `Desk Post-it`을 편집합니다. 채널별 위치와 줌은 `InGame → Cameras → Live Room Cameras` 아래 각 Camera의 Inspector에서 수정합니다. |
 | 시간·이동 속도·레시피·암호 | `Assets/Data/DayOneTuning.asset` |
 
@@ -42,5 +44,7 @@ Unity 메뉴에서 `Night Cafe → 편집 도구`를 열면 씬, 프리팹, 설�
 | `Assets/Editor` | 편집 도구, 씬 제작, 빌드 |
 
 아트는 짙은 남색과 바랜 청회색을 바탕으로 녹슨 붉은색을 강조점에 사용합니다. 픽셀 원본은 `Assets/Art/NightCafe`, 컵의 GIF 프레임은 그 안의 `FloatingCup`에 있습니다. `Tools/create_pixel_art.py`는 카페 배경·가구·소품·UI의 기본 PNG를 다시 생성합니다. 직접 수정한 PNG를 보존하려면 필요한 파일만 교체하세요.
+
+`Assets/Art/maps`에는 방 원본 이미지가 있고, `Assets/Art/MapPieces`에는 그 이미지에서 분리한 바닥, 벽, 창문, 장식 스프라이트가 있습니다. `Assets/Art/furniture`에서 가구 스프라이트를 선택할 수 있습니다. 바닥과 벽은 Inspector의 Sprite Renderer에서 Sprite와 Size를 편집하고, 가구의 물리 범위는 Box Collider 2D에서 확인합니다. 원본에서 스프라이트를 다시 추출하려면 `Tools/slice_map_art.py`의 잘라낼 범위를 편집한 후 실행합니다.
 
 일상 편집은 현재 씬과 프리팹을 열어 작업합니다. `Rebuild Authored Scenes`는 초기 제작용으로, 실행하면 배치와 UI를 다시 생성합니다.

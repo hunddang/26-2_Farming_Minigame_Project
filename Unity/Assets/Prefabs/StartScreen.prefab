@@ -1090,13 +1090,13 @@ MonoBehaviour:
     m_LineSpacing: 1
   m_Text: "WASD / \uBC29\uD5A5\uD0A4     \uC774\uB3D9 \xB7 CCTV \uCE74\uBA54\uB77C
     \uC804\uD658\nSpace                    \uC870\uC0AC \xB7 \uC0C1\uD638\uC791\uC6A9
-    \xB7 \uC120\uD0DD\nShift                      \uB2EC\uB9AC\uAE30\nF \uC190\uC804\uB4F1
-    \uCF1C\uAE30 / \uB044\uAE30\nTab                        \uADDC\uCE59\uC11C \uC5F4\uAE30
-    / \uB2EB\uAE30\n1\u20135                        \uC18C\uC9C0\uD488 \uC120\uD0DD
-    / \uC120\uD0DD \uD574\uC81C\nE                           \uC758\uC790 \uBE7C
-    \uC8FC\uAE30\nR                           \uC6B0\uD68C\uBB38 \uD37C\uC990 \uCD08\uAE30\uD654\nEsc
-    \uB4A4\uB85C \xB7 \uC77C\uC2DC\uC815\uC9C0\n\uB9C8\uC6B0\uC2A4 CCTV \xB7 \uBA54\uB274
-    \xB7 \uC18C\uC9C0\uD488 \uC120\uD0DD"
+    \xB7 \uC120\uD0DD\nShift                      \uB2EC\uB9AC\uAE30\nF \uC7A5\uBE44\uD55C
+    \uC190\uC804\uB4F1 \uC804\uC6D0\nTab                        \uC778\uBCA4\uD1A0\uB9AC
+    \uC5F4\uAE30 / \uB2EB\uAE30\n\uC6B0\uD074\uB9AD                   \uC544\uC774\uD15C
+    \uC7A5\uCC29 \xB7 \uC190/\uC7A5\uBE44 \uCE78\uC5D0\uC11C \uD574\uC81C\nE
+    \uC758\uC790 \uBE7C \uC8FC\uAE30\nR                           \uC6B0\uD68C\uBB38
+    \uD37C\uC990 \uCD08\uAE30\uD654\nEsc \uB4A4\uB85C \xB7 \uC77C\uC2DC\uC815\uC9C0\n\uB9C8\uC6B0\uC2A4
+    CCTV \xB7 \uBA54\uB274 \xB7 \uC18C\uC9C0\uD488 \uC120\uD0DD"
 --- !u!1 &4059316475766019643
 GameObject:
   m_ObjectHideFlags: 0
@@ -1542,8 +1542,9 @@ MonoBehaviour:
     m_VerticalOverflow: 0
     m_LineSpacing: 1
   m_Text: "\uADDC\uCE59\uC11C\uC640 \uBA54\uBAA8\uB97C \uC77D\uB294 \uB3D9\uC548\uC5D0\uB3C4
-    \uC2DC\uAC04\uC740 \uD750\uB985\uB2C8\uB2E4.\nEsc \uC77C\uC2DC\uC815\uC9C0 \uBA54\uB274\uC5D0\uC11C\uB294
-    \uC2DC\uAC04\uC774 \uBA48\uCDA5\uB2C8\uB2E4."
+    \uC2DC\uAC04\uC740 \uD750\uB985\uB2C8\uB2E4.\nTab \uC778\uBCA4\uD1A0\uB9AC\uC640
+    Esc \uC77C\uC2DC\uC815\uC9C0 \uBA54\uB274\uC5D0\uC11C\uB294 \uC2DC\uAC04\uC774
+    \uBA48\uCDA5\uB2C8\uB2E4."
 --- !u!1 &5125899307319763168
 GameObject:
   m_ObjectHideFlags: 0

@@ -58,14 +58,12 @@ namespace NightCafe
         {
             if (Phase != ShiftPhase.Incident || Inventory[(int)item]) return false;
             Inventory[(int)item] = true;
-            SelectedSlot = (int)item;
             return true;
         }
 
-        public void Select(int index)
+        public void HoldIngredient(int index)
         {
-            if (index >= 0 && index < Inventory.Length)
-                SelectedSlot = SelectedSlot == index ? -1 : index;
+            SelectedSlot = index >= 0 && index < Inventory.Length && Inventory[index] ? index : -1;
         }
 
         public bool TryPour()

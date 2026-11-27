@@ -25,7 +25,6 @@ namespace NightCafe
         public GameObject detourGrid;
         public Image[] detourTiles;
         public Text[] detourSymbols;
-        public Text controlHelp, itemHelp;
 
         private const string ChalkMessage = "영업 중.\n손님이 남아 있습니다.";
         private Transform[] shadowParts;

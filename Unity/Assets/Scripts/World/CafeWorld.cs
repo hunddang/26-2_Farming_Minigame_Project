@@ -12,6 +12,7 @@ namespace NightCafe
         public SpriteRenderer Flood;
         public Transform[] CoffeeDrops;
         public NightPlayer Player;
+        public CafeInteractable FlashlightPickup;
         public Vector3 CupOrigin => cupOrigin;
         private Vector3 cupOrigin;
         private SpriteRenderer cupRenderer;
@@ -41,6 +42,7 @@ namespace NightCafe
         public static readonly Vector2 SecuritySpawn = new Vector2(-15, 6);
         public static readonly Vector2 IncidentSpawn = new Vector2(1, -8);
         public const int PixelsPerTile = 64;
+        public const int SecurityRoomLayer = 8;
         public const float DoorWidth = 2;
         public const int BlackoutChannels = 4;
         public static readonly int[] CameraRooms = { 10, 13, 11, 12, 8, 9, 16, 15, 14, 17, 18 };

@@ -36,9 +36,6 @@ public static class NightCampaignAuthoring
         if (content.routes == null) CreateRoutes(content, game.World);
         if (content.scratchHand == null) CreateScratchHand(content);
         if (content.detourGrid == null) CreateDetourGrid(content, game.view);
-        var hudLabels = game.view.GetComponentsInChildren<Text>(true);
-        content.controlHelp = hudLabels.First(t => t.text.StartsWith("WASD 이동 · Shift 달리기"));
-        content.itemHelp = hudLabels.First(t => t.text.StartsWith("선택 후 컵 앞에서 Space"));
         game.view.GetComponent<CafeFont>().Refresh();
     }
 
@@ -65,8 +62,6 @@ public static class NightCampaignAuthoring
     private static void BindLabels(NightGameView view)
     {
         Text Find(GameObject parent, string value) => parent.GetComponentsInChildren<Text>(true).First(t => t.text == value);
-        view.nightHeader = Find(view.gameObject, "NIGHT SHIFT  /  01");
-        view.nightTitle = Find(view.gameObject, "첫 번째 밤");
         view.completeHeader = Find(view.complete, "SHIFT COMPLETE  /  01");
         view.completeTitle = Find(view.complete, "첫 번째 밤이 끝났다");
         view.failureHeader = Find(view.failure, "INCIDENT LOST  /  01");
@@ -269,6 +264,7 @@ public static class NightCampaignAuthoring
         Connect(10, DoorSide.Right, 5.65f, 16, DoorSide.Left, 8.3f);
         routes.portals=links.ToArray();
         routes.entrances=links.Select(link=>link.item).ToArray();
+        CafeLightingAuthoring.AddSecurityDoorLamp(routes);
         routes.hallDoor=links[10].item;
         routes.detourDoor=links[14].item;
         routes.tentacles = new[] { 6f, 10f, 14f }.Select(column =>

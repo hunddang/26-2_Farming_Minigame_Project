@@ -15,6 +15,7 @@ namespace NightCafe
         private Vector2 secondChaseStart;
         private int previousRoom;
         private float monsterGrace, powderUntil;
+        private DateTime shiftClockStart;
         private bool tentacleMemoryPlayed, pursuitMemoryPlayed;
         private int recordCause;
         private string recordPeople = "";
@@ -25,7 +26,7 @@ namespace NightCafe
             if (story == null) return;
             sightMaterial = new Material(story.darknessMaterial);
             story.darkness.material = sightMaterial;
-            foreach (var beam in World.Player.flashlight.GetComponentsInChildren<SpriteRenderer>()) beam.enabled = false;
+            UpdateSight();
             for (int i = 0; i < story.choices.Length; i++)
             {
                 int selection = i;
@@ -35,9 +36,25 @@ namespace NightCafe
         private void UpdateSight()
         {
             if (sightMaterial == null) return;
+            var player = World.Player;
+            int room = CafeWorld.RoomLayer(player.PlanPosition);
+            story.darkness.enabled = room != CafeWorld.SecurityRoomLayer;
+            if (!story.darkness.enabled) return;
+
             Vector2 face = World.Player.Facing;
             sightMaterial.SetVector("_Facing", new Vector4(face.x, face.y, 0, 0));
-            sightMaterial.SetFloat("_On", World.Player.FlashlightOn ? 1 : 0);
+            sightMaterial.SetFloat("_On", player.FlashlightOn ? 1 : 0);
+
+            var lamp = Routes?.securityDoorLamp;
+            if (lamp == null || !lamp.gameObject.activeInHierarchy || lamp.gameObject.layer != room)
+            {
+                sightMaterial.SetVector("_DoorLamp", Vector4.zero);
+                return;
+            }
+            Vector2 delta = (Vector2)lamp.position - player.PlanPosition;
+            float height = mapCamera.orthographicSize * 2f;
+            sightMaterial.SetVector("_DoorLamp", new Vector4(
+                .5f + delta.x / (height * mapCamera.aspect), .5f + delta.y / height, 1f, 0f));
         }
         private IEnumerator HeatMilk()
         {
@@ -50,9 +67,6 @@ namespace NightCafe
         }
         private void BeginAdvanced()
         {
-            foreach (var slot in inventorySlots)
-                foreach (var icon in slot.GetComponentsInChildren<Image>())
-                    if (icon != slot) icon.enabled = false;
             World.Flood.gameObject.SetActive(false); World.Cup.gameObject.SetActive(false);
             foreach (var drop in World.CoffeeDrops) drop.gameObject.SetActive(false);
             foreach (var item in World.Interactables)
@@ -72,13 +86,9 @@ namespace NightCafe
             else
             {
                 Fifth = new FifthShift(tuning);
+                shiftClockStart = DateTime.Now;
                 SyncFinalObjects();
             }
-            nightContent.controlHelp.text = "WASD 이동 · Shift 달리기\nSpace 조사 · F 손전등" +
-                (Day == 4 ? "\nE 소화기 분사" : "\n숫자 입력 · Enter 확정");
-            nightContent.itemHelp.text = Day == 4 ? "소화기는 정면의 가까운 대상에 분사합니다." : "1–5 소지한 기록 다시 읽기";
-            view.nightHeader.text = $"NIGHT SHIFT  /  {Day:00}";
-            view.nightTitle.text = Day == 4 ? "네 번째 밤" : "다섯 번째 밤";
             previousRoom = 8;
         }
         private void UpdateAdvanced()
@@ -115,7 +125,7 @@ namespace NightCafe
             }
             else if (nearest != null) { nearest.Highlight(false); nearest = null; }
             if (Day == 4) RefreshHuntObjects(); else SyncFinalObjects();
-            RefreshAdvancedHud(); RefreshLocation(); RefreshPrompt();
+            RefreshLocation(); RefreshPrompt(); RefreshInventory();
         }
         private void UseStoryTask(CafeInteractable item)
         {
@@ -153,45 +163,6 @@ namespace NightCafe
             for (int i = 0; i < story.cracks.Length; i++) story.cracks[i].gameObject.SetActive(i < amount * 3);
             story.handprint.SetActive(amount>=1);
             story.faceOutline.SetActive(amount>=2);
-        }
-        private void RefreshAdvancedHud()
-        {
-            bool frozen = Day == 5 && Fifth.Frozen;
-            float remaining = Day == 4 ? Fourth.Remaining : Fifth.Remaining;
-            timer.gameObject.SetActive(true); timerLine.gameObject.SetActive(!frozen && Phase == ShiftPhase.Incident);
-            timer.text = frozen ? FinaleClock() : $"{Mathf.CeilToInt(remaining) / 60:00}:{Mathf.CeilToInt(remaining) % 60:00}";
-            timer.color = frozen ? CafeUi.Muted : remaining < 45 ? CafeUi.Red : CafeUi.Amber;
-            timerLine.rectTransform.sizeDelta = new Vector2(timerLineWidth * remaining / (Day == 4 ? tuning.fourthNightSeconds : tuning.fifthNightSeconds), 3);
-            if (Day == 4)
-            {
-                objective.text = Fourth.Stage switch
-                {
-                    HuntStage.Leak => "CCTV의 소리와\n로비 누수를 확인하세요.", HuntStage.FirstChase => "소화기를 찾아\n정면에 분사하세요.",
-                    HuntStage.ReadNotes => "전임자의 노트를\n확인하세요.", HuntStage.Equipment => "창고에서 포획 장비를\n챙기세요.",
-                    HuntStage.SecondChase => "방의 반대편이나\n출구로 도망치세요.", HuntStage.InstallTrap => "노란 표식 중 한 곳에\n함정을 설치하세요.",
-                    HuntStage.Search => "CCTV에서 낙하자를\n찾아 현장으로 가세요.", HuntStage.ThirdChase => "낙하자를 함정으로\n유인하세요.", _ => "감시실로 돌아가세요."
-                };
-                status.text = Fourth.Chasing ? "발소리가 따라온다" : "천장이 조용하다";
-                progress.text = $"소화기 {Fourth.Charges}/2\n그물 {(Fourth.HasNet ? "●" : "○")}  고정구 {(Fourth.HasAnchor ? "●" : "○")}";
-                inventoryLabels[0].text = Fourth.HasExtinguisher ? $"소화기 {Fourth.Charges}/2" : "소화기 —";
-                inventoryLabels[1].text = Fourth.HasNet ? "그물" : "그물 —"; inventoryLabels[2].text = Fourth.HasAnchor ? "고정구" : "고정구 —";
-                inventoryLabels[3].text = Fourth.TrapRoom >= 0 ? "설치 · " + CafeWorld.RoomNames[Fourth.TrapRoom - 8] : "함정 —";
-                inventoryLabels[4].text = "전임자의 노트";
-            }
-            else
-            {
-                objective.text = Fifth.Stage switch
-                {
-                    FinaleStage.Blackout => "네 곳의 숫자를 찾아\n컴퓨터를 복구하세요.", FinaleStage.Return => "감시실로 돌아가세요.",
-                    FinaleStage.Escort => "손전등으로 비추며\n남은 사람과 함께\n출구로 이동하세요.",
-                    FinaleStage.Happy => "마지막 근무 종료", FinaleStage.Captured => "화면 안에 갇혔다", _ => "마지막 근무의\n원인을 조사하세요."
-                };
-                status.text = frozen ? $"시간 정지\nCCTV 균열  {Fifth.Cracks}/3" : "꺼진 CCTV";
-                progress.text = $"{(Fifth.Identified ? "●" : "○")} 직원 신원\n{(Fifth.TentaclesReleased ? "●" : "○")} 잠긴 문\n{(Fifth.SmokeCleared ? "●" : "○")} 배기와 연기\n{(Fifth.RecordCorrected ? "●" : "○")} 사고 기록";
-                string[] names = { "근무표", "사고 기록", "수리 요청", "정비도", "A의 쪽지" };
-                bool[] found = { Fifth.RosterRead, Fifth.AccidentRead, Fifth.RepairRequestRead, Fifth.DiagramRead, Fifth.HasNote };
-                for (int i = 0; i < 5; i++) inventoryLabels[i].text = $"{i + 1} {names[i]}" + (found[i] ? "" : " —");
-            }
         }
         private static void SetLayer(Transform root, int room)
         {

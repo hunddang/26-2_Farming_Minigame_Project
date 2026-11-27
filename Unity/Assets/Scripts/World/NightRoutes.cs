@@ -23,6 +23,7 @@ namespace NightCafe
         public CafeInteractable hallDoor, detourDoor;
         public CafeInteractable[] entrances;
         public Portal[] portals;
+        public Transform securityDoorLamp;
         public Transform pursuer;
         public Transform[] tentacles;
         public SpriteRenderer[] tentacleWarnings;

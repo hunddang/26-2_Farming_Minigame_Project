@@ -9,6 +9,8 @@ namespace NightCafe
     {
         [SerializeField] private NightContent nightContent;
         private static int pendingDay = 1;
+        private static bool pendingRuleBook;
+        private static (bool owned, bool equipped, bool powered) pendingFlashlight;
         private LaterShift laterShift;
         private AudioClip scratch;
         private float failureStarted = -1;
@@ -18,43 +20,33 @@ namespace NightCafe
         private NightRoutes Routes => nightContent == null ? null : nightContent.routes;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        public static void ResetCampaignEntry() => pendingDay = 1;
+        public static void ResetCampaignEntry()
+        {
+            pendingDay = 1;
+            pendingRuleBook = false;
+            pendingFlashlight = default;
+        }
 
         private void BeginShift()
         {
             Day = pendingDay;
-            pendingDay = 1;
+            ownsRuleBook = pendingRuleBook;
+            ownsFlashlight = pendingFlashlight.owned;
+            if (pendingFlashlight.equipped) SetEquippedItem(InventoryItem.Flashlight, powerOn: pendingFlashlight.powered);
+            ResetCampaignEntry();
             if (nightContent == null) Day = 1;
-            if (view.nightHeader != null) view.nightHeader.text = $"NIGHT SHIFT  /  {Day:00}";
-            if (view.nightTitle != null) view.nightTitle.text = Day == 1 ? "첫 번째 밤" : Day == 2 ? "두 번째 밤" : "세 번째 밤";
             view.completeButtons[0].GetComponentInChildren<Text>().text =
                 Day < 5 && nightContent != null ? "다음 밤 시작" : "시작 화면으로";
             if (Routes != null) Routes.Activate(World,Day);
             InitializeSight();
+            if (World.FlashlightPickup != null) World.FlashlightPickup.gameObject.SetActive(!ownsFlashlight);
             if (Day >= 4) { BeginAdvanced(); return; }
             if (Day == 1) return;
 
             laterShift = new LaterShift(Day, Day == 2 ? tuning.secondNightSeconds : tuning.thirdNightSeconds,
                 Day == 3 ? nightContent.seats.Length : 0);
             nightContent.Activate(laterShift, World);
-            if (Day == 2)
-            {
-                scratch = MakeScratch();
-            }
-            nightContent.controlHelp.text = "WASD 이동 · Shift 달리기\nSpace 조사 · F 손전등" +
-                (Day == 3 ? "\nE 의자 빼 주기" : "");
-            nightContent.itemHelp.text = Day == 2 ? "컵과 행주는 조사하면 챙깁니다." : "지우개를 챙긴 뒤 칠판을 조사하세요.";
-            for (int i = 0; i < inventorySlots.Length; i++)
-            {
-                if (i >= (Day == 2 ? 2 : 1))
-                {
-                    inventorySlots[i].gameObject.SetActive(false);
-                    continue;
-                }
-                inventorySlots[i].GetComponent<Button>().interactable = false;
-                foreach (var icon in inventorySlots[i].GetComponentsInChildren<Image>())
-                    if (icon != inventorySlots[i]) icon.enabled = false;
-            }
+            if (Day == 2) scratch = MakeScratch();
         }
 
         public void FinishShift()
@@ -67,6 +59,8 @@ namespace NightCafe
         {
             CloseOverlay();
             pendingDay = day;
+            pendingRuleBook = ownsRuleBook;
+            pendingFlashlight = (ownsFlashlight, FlashlightEquipped, World.Player.FlashlightOn);
             SceneManager.LoadScene(gameObject.scene.name);
         }
 
@@ -209,45 +203,6 @@ namespace NightCafe
             return amount >= 1;
         }
 
-        private void RefreshLaterHud()
-        {
-            var phase = laterShift.Phase;
-            bool running = phase == ShiftPhase.Surveillance || phase == ShiftPhase.Incident;
-            timer.gameObject.SetActive(running);
-            timerLine.gameObject.SetActive(running);
-            int seconds = Mathf.CeilToInt(laterShift.Remaining);
-            timer.text = $"{seconds / 60:00}:{seconds % 60:00}";
-            timer.color = seconds < 45 ? CafeUi.Red : CafeUi.Amber;
-            timerLine.rectTransform.sizeDelta = new Vector2(timerLineWidth * laterShift.Remaining / laterShift.Duration, 3);
-            objective.text = phase switch
-            {
-                ShiftPhase.Surveillance => "CCTV로 이상을 살피고\n현장을 확인하세요.",
-                ShiftPhase.Incident => Day == 2 ? "메뉴판의 붉은 흔적을\n조사하세요." :
-                    laterShift.Warehouse ? "창고의 그림자를\n확인하세요." : "홀의 그림자와\n마감 안내를 살피세요.",
-                ShiftPhase.Resolved => "감시실로\n돌아가세요.",
-                ShiftPhase.Complete => "오늘의 근무 완료",
-                _ => "사건 해결 실패"
-            };
-            status.text = running ? $"남은 이상현상  {laterShift.RemainingIncidents}" : "근무 기록";
-            progress.text = (laterShift.Viewed ? "●" : "○") + " CCTV 확인";
-            if (Day == 2)
-            {
-                if (laterShift.RestrictTurning) status.text += "\n뒤를 한 번에 돌지 마세요.";
-                progress.text += laterShift.MenuInspected ? "\n● 메뉴판 조사" : "\n○ 메뉴판 조사";
-                inventoryLabels[0].text = laterShift.Water switch
-                {
-                    WaterState.Empty => "빈 컵", WaterState.Cold => "찬물이 든 컵", WaterState.Hot => "데운 물이 든 컵", _ => "컵 —"
-                };
-                inventoryLabels[1].text = laterShift.WetCloth ? "젖은 행주" : laterShift.HasCloth ? "마른 행주" : "행주 —";
-            }
-            else
-            {
-                progress.text += laterShift.Warehouse ? "\n● 홀 정리 완료" : $"\n○ 남은 의자  {laterShift.ChairsLeft}";
-                inventoryLabels[0].text = laterShift.HasEraser ? "칠판지우개" : "칠판지우개 —";
-                inventoryLabels[1].text = "";
-            }
-            for (int i = 2; i < inventoryLabels.Length; i++) inventoryLabels[i].text = "";
-        }
 
         private static AudioClip MakeScratch()
         {

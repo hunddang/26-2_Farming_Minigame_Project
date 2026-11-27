@@ -7,13 +7,10 @@ namespace NightCafe
     public sealed class NightGameView : MonoBehaviour
     {
         [Header("HUD")]
-        public Text objective, status, timer, prompt, toast, location, progress;
-        public Image timerLine, floodWarning;
-        public Text[] inventoryLabels;
-        public Image[] inventorySlots;
-        public Button[] inventoryButtons;
-        public Button pauseButton, rulesButton;
-        public Text nightHeader, nightTitle, completeHeader, completeTitle, failureHeader, failureTitle, failureBody;
+        public Text prompt, toast;
+        public Image floodWarning;
+        public InventoryView inventory;
+        public Text completeHeader, completeTitle, failureHeader, failureTitle, failureBody;
 
         [Header("Authored overlays (inactive until opened)")]
         public GameObject rules, reading, cctv, pause, failure, complete;
@@ -25,14 +22,8 @@ namespace NightCafe
 
         public void Bind(NightGame game)
         {
-            pauseButton.onClick.AddListener(game.Pause);
-            rulesButton.onClick.AddListener(game.OpenRules);
+            inventory.Bind(game);
             foreach (var button in closeButtons) button.onClick.AddListener(game.CloseOverlay);
-            for (int i = 0; i < inventoryButtons.Length; i++)
-            {
-                int slot = i;
-                inventoryButtons[i].onClick.AddListener(() => game.SelectSlot(slot));
-            }
             for (int i = 0; i < cameraButtons.Length; i++)
             {
                 int camera = i;

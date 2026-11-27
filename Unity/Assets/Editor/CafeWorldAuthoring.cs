@@ -84,16 +84,11 @@ namespace NightCafe
             Furniture("Staff table", At(12, 7.6f, 6.05f), new Vector2(2, 1), Wood);
             if (withPlayer)
             {
-                var player = Shape("Player", CafeWorld.SecuritySpawn, Vector2.one, CafeUi.Green, 8, true).gameObject;
-                Shape("Head", new Vector2(0, 0.16f), new Vector2(.52f, .52f), CafeUi.Paper, 9, true, player.transform);
+                var player = new GameObject("Player");
+                player.transform.position = CafeWorld.SecuritySpawn;
                 player.AddComponent<Rigidbody2D>();
                 player.AddComponent<CircleCollider2D>();
                 Player = player.AddComponent<NightPlayer>();
-                Player.flashlight = Flashlight(player.transform);
-                // Collider uses world dimensions; visuals stay independently sized.
-                player.transform.localScale = Vector3.one;
-                player.GetComponent<SpriteRenderer>().size = Vector2.one;
-                player.GetComponent<SpriteRenderer>().drawMode = SpriteDrawMode.Sliced;
             }
         }
 
@@ -170,14 +165,5 @@ namespace NightCafe
             label.GetComponent<RectTransform>().localRotation = Quaternion.identity;
         }
 
-        public static Transform Flashlight(Transform parent)
-        {
-            var beam = Shape("Flashlight", new Vector2(0, 2.5f), new Vector2(4.2f, 5), new Color(1, 0.9f, 0.6f, 0.22f), 7, false, parent);
-            beam.sprite = CafeSceneAuthoring.Sprite("flashlight");
-            var pivot = new GameObject("Flashlight Pivot").transform;
-            pivot.SetParent(parent, false);
-            beam.transform.SetParent(pivot, false);
-            return pivot;
-        }
     }
 }

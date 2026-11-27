@@ -17,7 +17,7 @@ namespace NightCafe
         public NightGameView view;
         public CafeWorld World => world;
         public CafeInteractable CurrentTarget => nearest;
-        public bool InputBlocked => overlay != Overlay.None || pouring || storyBusy || Phase == ShiftPhase.Failed;
+        public bool InputBlocked => InventoryOpen || overlay != Overlay.None || pouring || storyBusy || Phase == ShiftPhase.Failed;
         private enum Overlay { None, Cctv, Rules, Reading, Detour, StoryForm, Pause, Failure, Complete }
         private Overlay overlay;
         private GameObject modal;
@@ -25,12 +25,10 @@ namespace NightCafe
         public Camera[] roomCameras;
         public Camera ActiveRoomCamera { get; private set; }
         public Camera mapCamera;
-        public const string DeskNote = "이상한 게 보이면 직접 확인해 주세요.\n감시실에서만 CCTV를 볼 수 있어요.\n\nWASD · 지도 클릭  카메라 선택\nSpace  조사     Shift  달리기\nF  손전등     Tab  규칙서\n1–5  소지품     Esc  닫기";
+        public const string DeskNote = "이상한 게 보이면 직접 확인해 주세요.\n감시실에서만 CCTV를 볼 수 있어요.\n\nWASD · 지도 클릭  카메라 선택\nSpace  조사     Shift  달리기\nTab  인벤토리     Esc  닫기\nF  장비한 손전등 전원";
         private RenderTexture feed;
-        private Text objective, status, timer, prompt, toast, location, progress;
-        private Image timerLine, floodWarning;
-        private Text[] inventoryLabels;
-        private Image[] inventorySlots;
+        private Text prompt, toast;
+        private Image floodWarning;
         private Button[] cameraButtons;
         private Text feedTitle;
         private CafeInteractable nearest;
@@ -42,12 +40,11 @@ namespace NightCafe
         public AudioSource sound;
         private AudioClip clatter;
         private float floodAtResolution;
-        private float timerLineWidth;
 
         private void Start()
         {
             CafeUi.ConfigureWindow();
-            if (tuning == null || world == null || view == null || mapCamera == null || feedCamera == null ||
+            if (tuning == null || world == null || view == null || view.inventory == null || mapCamera == null || feedCamera == null ||
                 roomCameras == null || roomCameras.Length != CafeWorld.CameraRooms.Length || sound == null)
             {
                 Debug.LogError("NightGame: assign tuning, world, view, cameras and sound in the scene Inspector.", this);
@@ -60,16 +57,14 @@ namespace NightCafe
             feedCamera.targetTexture = feed;
             feedCamera.enabled = false;
             view.feedImage.texture = null;
-            objective = view.objective; status = view.status; timer = view.timer;
-            prompt = view.prompt; toast = view.toast; location = view.location; progress = view.progress;
-            timerLine = view.timerLine; floodWarning = view.floodWarning;
-            inventoryLabels = view.inventoryLabels; inventorySlots = view.inventorySlots;
+            prompt = view.prompt; toast = view.toast;
+            floodWarning = view.floodWarning;
             cameraButtons = view.cameraButtons; feedTitle = view.feedTitle;
-            timerLineWidth = timerLine.rectTransform.sizeDelta.x;
             view.Bind(this);
             clatter = MakeClatter();
             BeginShift();
-            Toast("감시실에서 근무를 시작했다. 책상 단말기에서 CCTV와 메모를 확인하자.", 7);
+            RefreshInventory();
+            Toast("감시실 책상에서 손전등을 챙기고 CCTV를 확인하자.", 7);
             if (Day == 1 && Array.IndexOf(Environment.GetCommandLineArgs(), "-foundationSmokeTest") >= 0)
                 new GameObject("Foundation Smoke Test").AddComponent<FoundationSmokeTest>().game = this;
         }
@@ -77,10 +72,10 @@ namespace NightCafe
         private void Update()
         {
             if (Session == null) return;
-            UpdateSight();
+            if (HandleInventoryInput()) return;
             if (Day >= 4) { UpdateAdvanced(); return; }
             pulseClock += Time.deltaTime;
-            // Reading rules, recipes and CCTV never freezes the incident; only Pause does.
+            // Inventory input returns before simulation so the world stays frozen behind it.
             if (overlay != Overlay.Pause)
             {
                 if (laterShift == null) Session.Tick(Time.deltaTime);
@@ -114,8 +109,12 @@ namespace NightCafe
             else if (nearest != null) { nearest.Highlight(false); nearest = null; }
             if (laterShift == null) AnimateWorld();
             else nightContent.Refresh(laterShift, World.Player.PlanPosition, overlay == Overlay.Cctv);
-            RefreshHud();
+            RefreshLocation();
+            RefreshPrompt();
+            RefreshInventory();
         }
+
+        private void LateUpdate() => UpdateSight();
 
         private void HandleInput()
         {
@@ -125,11 +124,6 @@ namespace NightCafe
             {
                 if (overlay == Overlay.None) Pause();
                 else if (overlay == Overlay.Pause || overlay == Overlay.Reading || overlay == Overlay.Rules || overlay == Overlay.Cctv || overlay == Overlay.Detour || overlay == Overlay.StoryForm) CloseOverlay();
-                return;
-            }
-            if (keys.tabKey.wasPressedThisFrame && (overlay == Overlay.None || overlay == Overlay.Rules))
-            {
-                if (overlay == Overlay.Rules) CloseOverlay(); else OpenRules();
                 return;
             }
             if (overlay == Overlay.Cctv)
@@ -155,11 +149,6 @@ namespace NightCafe
                 HandleDetourInput(keys);
                 return;
             }
-            if (keys.digit1Key.wasPressedThisFrame) SelectSlot(0);
-            if (keys.digit2Key.wasPressedThisFrame) SelectSlot(1);
-            if (keys.digit3Key.wasPressedThisFrame) SelectSlot(2);
-            if (keys.digit4Key.wasPressedThisFrame) SelectSlot(3);
-            if (keys.digit5Key.wasPressedThisFrame) SelectSlot(4);
             if (Day == 4 && keys.eKey.wasPressedThisFrame && Fourth.Chasing) { UseSpray(); return; }
             if (keys.spaceKey.wasPressedThisFrame && nearest != null) Interact(nearest);
             else if (keys.eKey.wasPressedThisFrame && nearest != null && nearest.nightAction == NightAction.Chair)
@@ -203,13 +192,20 @@ namespace NightCafe
                     if(item.nightAction==NightAction.Microwave) StartCoroutine(HeatMilk());
                     else UseNightTask(item);
                     break;
-                case InteractionKind.RuleBook: OpenRules(); break;
-                case InteractionKind.Recipe:
-                    Session.RecipeRead = true;
-                    string order = string.Join("  →  ", Array.ConvertAll(tuning.recipe, GameTuning.IngredientName));
-                    Read("접힌 카페 레시피", "CAFÉ MOCHA\n\n에스프레소에 초콜릿 소스를 먼저 녹이고 데운 우유를 섞는다.\n\n★ " + order + " ★\n\n사장 메모: 순서가 바뀌면 맛이 달라져요.\n\n우유는 전자레인지에서 90~120초 데운다.\n재료는 카운터 제조 공간에 보관.\n엉뚱한 재료는 넣지 말 것."); break;
+                case InteractionKind.RuleBook: ownsRuleBook = true; OpenRules(); break;
+                case InteractionKind.Recipe: OpenRecipe(); break;
+                case InteractionKind.Flashlight:
+                    if (!TryReturnItem(InventoryItem.Flashlight, -1))
+                    {
+                        Toast("인벤토리에 빈칸이 없다.");
+                        break;
+                    }
+                    ownsFlashlight = true;
+                    item.gameObject.SetActive(false);
+                    Toast("손전등을 챙겼다. Tab을 눌러 인벤토리에서 우클릭해 장비하자.");
+                    break;
                 case InteractionKind.Ingredient:
-                    if (Session.Collect(item.ingredient)) Toast(item.title + "를 소지품에 넣었다. [" + ((int)item.ingredient + 1) + "]로 선택 / 해제.");
+                    if (Session.Collect(item.ingredient)) Toast(item.title + " 획득. Tab으로 인벤토리를 열고 우클릭해 손에 들 수 있다.");
                     else Toast(Session.Phase == ShiftPhase.Incident ? "이미 가지고 있는 재료다." : "지금은 재료가 필요하지 않다.");
                     break;
                 case InteractionKind.Cup:
@@ -246,6 +242,7 @@ namespace NightCafe
             if (Session.Phase == ShiftPhase.Incident)
             {
                 bool correct = Session.TryPour();
+                if (!ReturnHeldItem()) SetHeldItem(HeldItem, handReturnSlot);
                 if (Session.Phase == ShiftPhase.Resolved)
                 {
                     floodAtResolution = Mathf.Clamp01(1 - Session.Remaining / tuning.incidentSeconds);
@@ -257,12 +254,11 @@ namespace NightCafe
             pouring = false;
         }
 
-        public void SelectSlot(int index)
+        private void OpenRecipe()
         {
-            if (Day >= 4) { SelectEvidence(index); return; }
-            if (InputBlocked || laterShift != null) return;
-            if (!Session.Inventory[index]) { Toast("아직 가지고 있지 않은 재료다.", 2); return; }
-            Session.Select(index);
+            Session.RecipeRead = true;
+            string order = string.Join("  →  ", Array.ConvertAll(tuning.recipe, GameTuning.IngredientName));
+            Read("접힌 카페 레시피", "CAFÉ MOCHA\n\n에스프레소에 초콜릿 소스를 먼저 녹이고 데운 우유를 섞는다.\n\n★ " + order + " ★\n\n사장 메모: 순서가 바뀌면 맛이 달라져요.\n\n우유는 전자레인지에서 90~120초 데운다.\n재료는 카운터 제조 공간에 보관.\n엉뚱한 재료는 넣지 말 것.");
         }
 
         private void OpenOverlay(Overlay next, GameObject panel)
@@ -275,6 +271,7 @@ namespace NightCafe
 
         public void CloseOverlay()
         {
+            CloseInventory();
             if(story != null && story.form != null) story.form.SetActive(false);
             if (overlay == Overlay.Detour)
             {
@@ -290,7 +287,7 @@ namespace NightCafe
             Time.timeScale = 1;
         }
 
-        public void OpenRules()
+        private void OpenRules()
         {
             if (overlay != Overlay.None || pouring) return;
             if (Day >= 4) { OpenAdvancedNotes(); return; }
@@ -300,6 +297,7 @@ namespace NightCafe
                 view.readingBody.text = Day == 2
                     ? "문구가 드러난 동안 뒤를 한 번에 돌아보지 마십시오.\n방향을 바꿀 때는 옆을 먼저 보십시오.\n\n붉은 흔적은 따뜻하게 불린 뒤 닦으십시오."
                     : "빈자리에 손님이 보이면 의자를 빼 주십시오.\n분필이 혼자 움직이더라도 칠판의 글씨를 지우지 마십시오.\n두 문장 모두 지웠다가 덧쓴 자국이 남아 있다.\n\n홀 연결 복도는 CCTV 지도에서 확인할 수 있습니다.";
+                view.readingBody.text += "\n\nTab 인벤토리";
                 OpenOverlay(Overlay.Rules, view.reading);
                 return;
             }
@@ -440,42 +438,9 @@ namespace NightCafe
             return amount>=1;
         }
 
-        private void RefreshHud()
-        {
-            if (laterShift != null)
-            {
-                RefreshLaterHud();
-                RefreshLocation();
-                RefreshPrompt();
-                return;
-            }
-            var phase = Session.Phase;
-            timer.gameObject.SetActive(phase == ShiftPhase.Incident);
-            timerLine.gameObject.SetActive(phase == ShiftPhase.Incident);
-            int seconds = Mathf.CeilToInt(Session.Remaining);
-            timer.text = (seconds / 60).ToString("00") + ":" + (seconds % 60).ToString("00");
-            timer.color = seconds < 45 || Session.SurgeRemaining > 0 ? CafeUi.Red : CafeUi.Amber;
-            timerLine.rectTransform.sizeDelta = new Vector2(timerLineWidth * Session.Remaining / tuning.incidentSeconds, 3);
-            objective.text = phase == ShiftPhase.Surveillance ? "CCTV를 확인하고\n카페를 둘러보세요." : phase == ShiftPhase.Incident ? "현장을 조사하고\n커피의 흐름을\n멈추세요." : phase == ShiftPhase.Resolved ? Session.CleanupRemaining > 0 ? "커피가 사라지고\n있습니다…" : "감시실로\n돌아가세요." : phase == ShiftPhase.Complete ? "오늘의 근무 완료" : "사건 해결 실패";
-            status.text = phase == ShiftPhase.Surveillance ? "카메라 대기 중" : phase == ShiftPhase.Incident ? "범람 수위  " + Mathf.RoundToInt(Session.Flood * 100) + "%\n" + (Session.SurgeRemaining > 0 ? "커피 범람 가속 중!" : "커피가 차오르고 있습니다.") : phase == ShiftPhase.Resolved ? "현상 해소 · 자동 정리" : "근무 종료";
-            progress.text = (Session.CameraViewed ? "●" : "○") + " CCTV 확인\n" + (Session.CupInspected ? "●" : "○") + " 컵 조사\n" + (Session.RecipeRead ? "●" : "○") + " 레시피 열람";
-            RefreshLocation();
-            for (int i = 0; i < 5; i++)
-            {
-                bool owned = Session.Inventory[i];
-                inventoryLabels[i].text = (i + 1) + "  " + GameTuning.IngredientName((Ingredient)i) + (owned ? "" : "  —");
-                inventorySlots[i].GetComponent<CafeButtonStyle>().Select(Session.SelectedSlot == i);
-                inventoryLabels[i].color = owned ? Session.SelectedSlot == i ? CafeUi.Ink : CafeUi.Paper : CafeUi.Muted;
-            }
-            RefreshPrompt();
-        }
-
         private void RefreshLocation()
         {
-            Vector2 pos = World.Player.PlanPosition;
-            mapCamera.cullingMask = CafeWorld.RoomMask(pos);
-            int room = CafeWorld.RoomLayer(pos);
-            location.text = room >= 8 ? CafeWorld.RoomNames[room-8] : "문 앞";
+            mapCamera.cullingMask = CafeWorld.RoomMask(World.Player.PlanPosition);
         }
 
         private void RefreshPrompt()
@@ -508,6 +473,8 @@ namespace NightCafe
             Application.Quit();
 #endif
         }
+        private void OnDisable() => CloseInventory();
+
         private void OnDestroy()
         {
             Time.timeScale = 1;

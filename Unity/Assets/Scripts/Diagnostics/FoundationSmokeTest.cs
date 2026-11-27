@@ -14,6 +14,7 @@ namespace NightCafe
     {
         public NightGame game;
         private Keyboard keyboard;
+        private Mouse mouse;
         private readonly List<string> failures=new List<string>();
         private int checks;
         private float began;
@@ -53,6 +54,105 @@ namespace NightCafe
             InputSystem.QueueStateEvent(keyboard,new KeyboardState(key));yield return null;yield return null;
             InputSystem.QueueStateEvent(keyboard,new KeyboardState());yield return null;yield return null;
         }
+        private IEnumerator Pointer(Vector2 position, MouseButton? button = null)
+        {
+            var state = new MouseState { position = position };
+            if (button.HasValue) state = state.WithButton(button.Value);
+            InputSystem.QueueStateEvent(mouse, state);
+            yield return null;
+            yield return null;
+        }
+        private Vector2 SlotPoint(int index) => SlotPoint(game.view.inventory.cells[index]);
+        private static Vector2 SlotPoint(InventoryCell slot)
+        {
+            var rect = slot.frame.rectTransform;
+            return RectTransformUtility.WorldToScreenPoint(null, rect.TransformPoint(rect.rect.center));
+        }
+        private IEnumerator RightClickSlot(int index) => RightClickSlot(game.view.inventory.cells[index]);
+        private IEnumerator RightClickSlot(InventoryCell slot)
+        {
+            var point = SlotPoint(slot);
+            yield return Pointer(point, MouseButton.Right);
+            yield return Pointer(point);
+        }
+        private IEnumerator DragSlot(int source, Vector2 destination)
+        {
+            var point = SlotPoint(source);
+            yield return Pointer(point, MouseButton.Left);
+            yield return Pointer(Vector2.Lerp(point, destination, .5f), MouseButton.Left);
+            yield return Pointer(destination, MouseButton.Left);
+            yield return Pointer(destination);
+        }
+        private IEnumerator Equip(InventoryItem item)
+        {
+            if (game.HeldItem == item || game.EquippedItem == item) yield break;
+            yield return Tap(Key.Tab);
+            int slot = Array.FindIndex(game.view.inventory.cells, cell => game.InventoryItemAt(cell.Index) == item);
+            Check(slot >= 0, $"Collected {item} is in the inventory");
+            if (slot >= 0) yield return RightClickSlot(slot);
+            Check(game.HeldItem == item || game.EquippedItem == item, $"Right click equips {item}");
+            yield return Tap(Key.Tab);
+        }
+        private IEnumerator CheckFlashlightEquipment()
+        {
+            var pickup = game.World.FlashlightPickup;
+            Check(pickup != null && pickup.isActiveAndEnabled && !game.story.darkness.enabled &&
+                !game.World.Player.FlashlightOn, "Security is fully lit and the player starts without a flashlight");
+            if (pickup == null) yield break;
+            yield return Tap(Key.F);
+            Check(!game.World.Player.FlashlightOn, "F does not turn on a flashlight the player has not equipped");
+            game.World.Player.Teleport((Vector2)pickup.transform.position + Vector2.down * .9f);
+            yield return new WaitForSeconds(.1f);
+            Check(game.CurrentTarget == pickup, "The flashlight is within reach from the front of the security desk");
+            yield return Tap(Key.Space);
+            Check(!pickup.gameObject.activeSelf && !game.World.Player.FlashlightOn, "Pickup puts the flashlight in the bag");
+            yield return Tap(Key.Tab);
+            int slot = Array.FindIndex(game.view.inventory.cells, cell => game.InventoryItemAt(cell.Index) == InventoryItem.Flashlight);
+            Check(slot >= 0, "The flashlight has a grid slot");
+            if (slot >= 0)
+            {
+                yield return DragSlot(slot, SlotPoint(7));
+                Check(game.InventoryItemAt(7) == InventoryItem.Flashlight, "The flashlight moves between grid slots");
+                yield return RightClickSlot(7);
+                Check(game.EquippedItem == InventoryItem.Flashlight && game.HeldItem == InventoryItem.None &&
+                    game.InventoryItemAt(7) == InventoryItem.None && game.World.Player.FlashlightOn &&
+                    game.view.inventory.equipment.icon.enabled, "Equipping transfers the flashlight to the equipment HUD and powers it on");
+                yield return RightClickSlot(game.view.inventory.equipment);
+                Check(game.EquippedItem == InventoryItem.None && game.InventoryItemAt(7) == InventoryItem.Flashlight &&
+                    !game.World.Player.FlashlightOn, "Right-clicking the equipment HUD returns the flashlight and turns it off");
+                yield return RightClickSlot(7);
+            }
+            yield return Tap(Key.Tab);
+            game.World.Player.Teleport(CafeWorld.RoomCenter(9));
+            yield return null;
+            yield return null;
+            Check(game.story.darkness.enabled && game.story.darkness.material.GetFloat("_On") == 1 &&
+                game.story.darkness.material.GetVector("_DoorLamp").z == 1, "Lobby shows equipped light and the independent red door lamp");
+            yield return Tap(Key.F);
+            Check(game.story.darkness.material.GetFloat("_On") == 0 &&
+                game.story.darkness.material.GetVector("_DoorLamp").z == 1, "Powering off leaves the red door lamp visible");
+            yield return Tap(Key.F);
+            game.World.Player.Teleport(CafeWorld.SecuritySpawn);
+            yield return null;
+            yield return null;
+            Check(!game.story.darkness.enabled && game.World.Player.FlashlightOn, "Security lighting stays bright with the flashlight equipped");
+        }
+        private IEnumerator CheckInventoryPause(Func<float> clock)
+        {
+            yield return Tap(Key.Tab);
+            float time = Time.time, remaining = clock();
+            var position = game.World.Player.PlanPosition;
+            var cup = game.World.Cup.position;
+            yield return Tap(Key.W);
+            yield return new WaitForSecondsRealtime(.15f);
+            Check(game.view.inventory.gameObject.activeInHierarchy && Time.timeScale == 0 && AudioListener.pause &&
+                clock() == remaining && Time.time == time && game.World.Player.PlanPosition == position &&
+                game.World.Cup.position == cup, $"Night {game.Day} inventory freezes time, world movement and audio");
+            yield return Tap(Key.Escape);
+            yield return new WaitForSeconds(.1f);
+            Check(!game.view.inventory.gameObject.activeSelf && Time.timeScale == 1 && !AudioListener.pause &&
+                clock() < remaining, $"Night {game.Day} resumes after closing inventory");
+        }
         private IEnumerator SprintTo(float coordinate, bool horizontal)
         {
             float Position() => horizontal ? game.World.Player.PlanPosition.x : game.World.Player.PlanPosition.y;
@@ -84,7 +184,15 @@ namespace NightCafe
             while(Time.realtimeSinceStartup<deadline)
             {
                 var next=FindFirstObjectByType<NightGame>();
-                if(next!=null && next!=previous && next.Day==day){game=next;yield return null;yield return null;yield break;}
+                if(next!=null && next!=previous && next.Day==day)
+                {
+                    game=next;yield return null;yield return null;
+                    yield return CheckInventoryPause(() => day switch
+                    {
+                        4 => game.Fourth.Remaining, 5 => game.Fifth.Remaining, _ => game.Later.Remaining
+                    });
+                    yield break;
+                }
                 yield return null;
             }
             Check(false,"Expected next night "+day);
@@ -97,11 +205,17 @@ namespace NightCafe
         {
             DontDestroyOnLoad(gameObject);began=Time.realtimeSinceStartup;
             InputSystem.settings.backgroundBehavior=InputSettings.BackgroundBehavior.IgnoreFocus;
-            keyboard=InputSystem.AddDevice<Keyboard>();yield return new WaitForSeconds(0.5f);
-            Check(Screen.width==1920 && Screen.height==1080,"FHD window");
+            keyboard=InputSystem.AddDevice<Keyboard>();
+            mouse=InputSystem.AddDevice<Mouse>();
+            yield return new WaitForSeconds(0.5f);
+            Check(Application.isEditor || (Screen.width==1920 && Screen.height==1080),"FHD window");
             Check(UnityEngine.SceneManagement.SceneManager.sceneCountInBuildSettings==2,"The two scene entry points remain playable");
             Check(game.mapCamera.orthographic && game.feedCamera.orthographic,"2D cameras");
             Check(game.World.Player.GetComponent<Rigidbody2D>()!=null,"2D movement and collisions");
+            Check(game.view.inventory.cells.Length == 8 && game.mapCamera.rect == new Rect(0,0,1,1) &&
+                game.view.transform.Find("Header") == null && game.view.transform.Find("Shift Record") == null &&
+                game.view.transform.Find("Inventory") == null, "Full-screen play area and eight slots replace the marked HUD");
+            yield return CheckFlashlightEquipment();
             CheckReachability();
             game.World.Player.Teleport(new Vector2(-15,6.5f));yield return new WaitForSeconds(0.1f);
             Check(game.CurrentTarget!=null && game.CurrentTarget.kind==InteractionKind.Camera,"Security CCTV can be reached");
@@ -137,6 +251,7 @@ namespace NightCafe
             game.CloseOverlay();
             game.World.Player.Teleport(CafeWorld.IncidentSpawn);yield return null;yield return null;
             Check(game.Session.Phase==ShiftPhase.Incident,"Hall entry begins the espresso incident");
+            yield return CheckInventoryPause(() => game.Session.Remaining);
             var spillDeadline = Time.time + 2.3f;
             while (Array.IndexOf(game.World.CupFrames, cupRenderer.sprite) < 17 && Time.time < spillDeadline)
                 yield return null;
@@ -144,6 +259,8 @@ namespace NightCafe
             yield return Shot("02b-cup-spill");
             game.Interact(Item(InteractionKind.Cup));
             game.Interact(game.World.Interactables.First(i=>i.kind==InteractionKind.Ingredient && i.ingredient==Ingredient.Milk));
+            Check(game.HeldItem == InventoryItem.None && game.Session.SelectedSlot == -1, "Pickup does not equip the ingredient");
+            yield return Equip(InventoryItem.Milk);
             game.Interact(Item(InteractionKind.Cup));yield return new WaitForSeconds(0.9f);
             Check(game.Session.Mistakes==1 && game.Session.Inventory[0],"Wrong first ingredient stays in inventory");
             game.Interact(Item(InteractionKind.Recipe));float before=game.Session.Remaining;
@@ -153,9 +270,36 @@ namespace NightCafe
             Check(game.Session.MilkHeated,"Milk is heated at the microwave");
             game.World.Player.Teleport(new Vector2(3,-6.3f));
             game.Interact(game.World.Interactables.First(i=>i.kind==InteractionKind.Ingredient && i.ingredient==Ingredient.Chocolate));
+            yield return Tap(Key.Tab);
+            int milkSlot = Array.FindIndex(game.view.inventory.cells, cell => game.InventoryItemAt(cell.Index) == InventoryItem.Milk);
+            int chocolateSlot = Array.FindIndex(game.view.inventory.cells, cell => game.InventoryItemAt(cell.Index) == InventoryItem.Chocolate);
+            Check(milkSlot >= 0 && chocolateSlot >= 0, "Both ingredients are represented by separate inventory cells");
+            if (milkSlot >= 0 && chocolateSlot >= 0)
+            {
+                yield return DragSlot(chocolateSlot, SlotPoint(milkSlot));
+                Check(game.InventoryItemAt(milkSlot) == InventoryItem.Chocolate &&
+                    game.InventoryItemAt(chocolateSlot) == InventoryItem.Milk, "A left drag to an occupied slot swaps items");
+                yield return DragSlot(milkSlot, SlotPoint(7));
+                Check(game.InventoryItemAt(7) == InventoryItem.Chocolate && game.InventoryItemAt(milkSlot) == InventoryItem.None,
+                    "A left drag to an empty slot moves only the dragged item");
+                yield return DragSlot(7, new Vector2(24, Screen.height - 24));
+                Check(game.InventoryItemAt(7) == InventoryItem.Chocolate && !game.view.inventory.dragIcon.enabled,
+                    "Dropping outside the inventory cancels the drag");
+                yield return RightClickSlot(7);
+                Check(game.HeldItem == InventoryItem.Chocolate && game.InventoryItemAt(7) == InventoryItem.None &&
+                    game.view.inventory.hand.icon.enabled && game.EquippedItem == InventoryItem.Flashlight,
+                    "The hand slot and equipment slot hold separate items");
+                yield return RightClickSlot(game.view.inventory.hand);
+                Check(game.HeldItem == InventoryItem.None && !game.view.inventory.hand.icon.enabled &&
+                    game.InventoryItemAt(7) == InventoryItem.Chocolate, "Right-clicking the hand HUD returns the item to the bag");
+                yield return RightClickSlot(7);
+            }
+            yield return Shot("02c-inventory");
+            yield return Tap(Key.Tab);
             game.Interact(Item(InteractionKind.Cup));yield return new WaitForSeconds(0.9f);
             Check(game.Session.RecipeStep==1,"Chocolate is the first recipe ingredient");
-            game.SelectSlot(0);game.Interact(Item(InteractionKind.Cup));yield return new WaitForSeconds(0.9f);
+            yield return Equip(InventoryItem.Milk);
+            game.Interact(Item(InteractionKind.Cup));yield return new WaitForSeconds(0.9f);
             Check(game.Session.Phase==ShiftPhase.Resolved,"Chocolate and hot milk resolve the espresso");
             yield return Shot("03-mocha-cleanup");yield return new WaitForSeconds(game.Tuning.cleanupSeconds+0.2f);
             game.World.Player.Teleport(CafeWorld.SecuritySpawn);yield return new WaitForSeconds(0.15f);
@@ -243,7 +387,7 @@ namespace NightCafe
             game.story.hunter.position=game.World.Player.PlanPosition+game.World.Player.Facing*2;
             yield return Tap(Key.E);
             Check(game.Fourth.Stage==HuntStage.ReadNotes && game.Fourth.Charges==1,"Real E input suppresses the first chase and preserves one charge");
-            game.OpenRules();yield return Shot("10-fourth-note");game.CloseOverlay();
+            game.Interact(Item(InteractionKind.RuleBook));yield return Shot("10-fourth-note");game.CloseOverlay();
             Check(game.Fourth.NotesRead,"The same notebook opens the equipment stage");
             game.World.Player.Teleport(new Vector2(18,7));Use(StoryAction.Net);Use(StoryAction.Anchor);yield return null;
             Check(game.Fourth.HasNet && game.Fourth.HasAnchor && game.Fourth.Stage==HuntStage.Equipment,"Both required pieces are picked up in storage");
@@ -302,12 +446,13 @@ namespace NightCafe
             game.Interact(Item(InteractionKind.Camera));game.SelectCamera(3);yield return Shot("16-identity-cctv");game.CloseOverlay();
             Check(game.Fifth.CanLeaveSecurity,"Roster, accident record and identity CCTV unlock security");
             game.World.Player.Teleport(new Vector2(18,-7));Use(StoryAction.Identity);game.CloseOverlay();
-            Use(StoryAction.Badge,1);Use(StoryAction.Identity);Use(StoryAction.Identity);Use(StoryAction.Identity);
+            Use(StoryAction.Badge,1);yield return Equip(InventoryItem.Badge);
+            Use(StoryAction.Identity);Use(StoryAction.Identity);Use(StoryAction.Identity);
             yield return new WaitForSeconds(0.1f);yield return Ready();yield return new WaitForSeconds(game.Tuning.cinematicSeconds*4+0.2f);
             Check(game.Phase==ShiftPhase.Failed && game.view.failure.activeSelf,"Three wrong identity confirmations play the captured ending");
             yield return Shot("17-captured-ending");game.view.failureButtons[0].onClick.Invoke();yield return new WaitForSeconds(0.1f);
             Check(game.Fifth.Cracks==0 && game.Fifth.CanLeaveSecurity && game.Fifth.IdentityInspected,"Retry keeps the acquired security evidence and identity inspection");
-            Use(StoryAction.Badge,0);Use(StoryAction.Identity);yield return Ready();
+            Use(StoryAction.Badge,0);yield return Equip(InventoryItem.Badge);Use(StoryAction.Identity);yield return Ready();
             Check(game.Fifth.Identified,"The correct employee badge removes the borrowed identity");
             game.World.Player.Teleport(new Vector2(35,1.8f));yield return new WaitForSeconds(0.1f);yield return Ready();
             Check(game.Fifth.RepairRequestRead && game.Fifth.MachineVideoSeen,"Tentacle memory gives repair and original machine evidence");

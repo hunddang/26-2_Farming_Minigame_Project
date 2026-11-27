@@ -99,6 +99,7 @@ public static class NightStoryAuthoring
 
         var root=game.view.transform;
         content.darkness=CafeUiAuthoring.Panel(root,"Directional flashlight sight",19,130,1488,810,Color.white);
+        content.darkness.enabled=false;
         content.darkness.transform.SetAsFirstSibling();
         var material=new Material(Shader.Find("NightCafe/Flashlight Sight"));
         const string materialPath="Assets/Art/NightCafe/FlashlightSight.mat";

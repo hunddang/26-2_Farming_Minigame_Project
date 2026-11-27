@@ -26,6 +26,7 @@ namespace NightCafe
                         Read("자신과 같은 얼굴", $"왼손은 붕대로 감겨 있다. 근무복에는 오래된 번호가 붙어 있다.\n\n직원번호  {tuning.victimNumber}\n\n쓰레기통에서 찾은 근무표와 대조해야 한다.");
                     }
                     else if (Fifth.SelectedBadge < 0) Toast("창고에서 번호와 일치하는 직원 이름 명찰을 찾아오자.");
+                    else if (HeldItem != InventoryItem.Badge) Toast("Tab으로 인벤토리를 열고 명찰을 우클릭해 손에 들자.");
                     else
                     {
                         bool correct = Fifth.GiveBadge(); RefreshCracks();
@@ -34,6 +35,8 @@ namespace NightCafe
                     }
                     break;
                 case StoryAction.Badge:
+                    if (Fifth.SelectedBadge != item.taskIndex && HeldItem == InventoryItem.Badge)
+                        SetHeldItem(InventoryItem.None);
                     Fifth.TakeBadge(item.taskIndex); Toast("명찰을 챙겼다.  " + BadgeName(item.taskIndex)); break;
                 case StoryAction.WireCode:
                     Read("녹은 전선과 잠금장치", $"전선 피복 사이로 번호 {tuning.controlPassword}가 보인다.\n\n잠긴 출구의 자물쇠와 같은 번호다."); break;
@@ -129,7 +132,7 @@ namespace NightCafe
             }
             story.smoke.SetActive(Fifth.Frozen && !Fifth.SmokeCleared);
             story.spirit.gameObject.SetActive(Fifth.Stage == FinaleStage.Escort || Fifth.Stage == FinaleStage.Happy);
-            story.wallClock.text = Fifth.Frozen ? FinaleClock() : System.DateTime.Now.ToString("HH:mm:ss");
+            story.wallClock.text = Fifth.Frozen ? FinaleClock() : shiftClockStart.AddSeconds(pulseClock).ToString("HH:mm:ss");
             if (Fifth.Frozen) feedTitle.text = CameraHeading() + "  /  " + FinaleClock();
             RefreshCracks();
         }
@@ -239,20 +242,21 @@ namespace NightCafe
             {
                 if (Fourth.Stage == HuntStage.FirstChase) { Toast("지금은 읽을 틈이 없다. 벽면 소화기를 찾아야 한다."); return; }
                 Fourth.ReadNotes();
-                Read("전임자의 노트 · 네 번째 밤", "천장에서 물이 떨어진다. 소리가 멈추면 그곳에서 떨어져.\n소화기 분말을 맞히니 잠시 멈췄다. 완전히 쓰러진 건 아니다.\n그놈은 다시 천장으로 올라간다. 길을 막을 방법만 있다면…\n창고에 그물과 고정할 만한 쇠붙이가 있다. 해봐야 한다.\n<color=#B0A394><i>또 소리가 난다. 이번에는 가까…</i></color>");
+                Read("전임자의 노트 · 네 번째 밤", "천장에서 물이 떨어진다. 소리가 멈추면 그곳에서 떨어져.\n소화기 분말을 맞히니 잠시 멈췄다. 완전히 쓰러진 건 아니다.\n그놈은 다시 천장으로 올라간다. 길을 막을 방법만 있다면…\n창고에 그물과 고정할 만한 쇠붙이가 있다. 해봐야 한다.\n<color=#B0A394><i>또 소리가 난다. 이번에는 가까…</i></color>\n\nTab 인벤토리");
             }
-            else if (!Fifth.Frozen) Read("전임자의 노트 · 다섯 번째 밤", "카메라 복구 서열\n\n손님 1순위 · 사장님 2순위\n카운터 알바생 3순위 · 창고 알바생 4순위\n\n각 카메라 아래의 숫자를 그 순서로 숙직실 컴퓨터에 입력한다.");
-            else Read("같은 노트의 마지막 페이지", "<b>근무 종료가 확인되지 않으면 당장 카페에서 나가십시오. 뒤를 돌아보거나 남은 사람을 확인하지 마십시오.</b>\n\n<color=#C0A597><i>5일째에는 노트에 적힌 방법을 그대로 따라 하지 말 것.</i></color>\n\n눌러 쓴 글씨 옆으로 잉크가 번져 있다.");
+            else if (!Fifth.Frozen) Read("전임자의 노트 · 다섯 번째 밤", "카메라 복구 서열\n\n손님 1순위 · 사장님 2순위\n카운터 알바생 3순위 · 창고 알바생 4순위\n\n각 카메라 아래의 숫자를 그 순서로 숙직실 컴퓨터에 입력한다.\n\nTab 인벤토리");
+            else Read("같은 노트의 마지막 페이지", "<b>근무 종료가 확인되지 않으면 당장 카페에서 나가십시오. 뒤를 돌아보거나 남은 사람을 확인하지 마십시오.</b>\n\n<color=#C0A597><i>5일째에는 노트에 적힌 방법을 그대로 따라 하지 말 것.</i></color>\n\n눌러 쓴 글씨 옆으로 잉크가 번져 있다.\n\nTab 인벤토리");
         }
-        private void SelectEvidence(int index)
+        private void ReadEvidence(InventoryItem item)
         {
-            if (InputBlocked || Day != 5) return;
-            if (index == 0 && Fifth.RosterRead) Read("직원 근무표", RosterText());
-            else if (index == 1 && Fifth.AccidentRead) OpenAccident();
-            else if (index == 2 && Fifth.RepairRequestRead) Read("수리 요청서", RepairText());
-            else if (index == 3 && Fifth.DiagramRead) Read("복도 정비도", "외부 배기구를 막은 박스를 내리고 조절판을 외부 쪽으로 돌린다.");
-            else if (index == 4 && Fifth.HasNote) Read("A의 쪽지", "사장님이 수리를 미루고 제가 안에 있는 채 문을 잠갔어요. 이번에는 혼자 두고 가지 말아 주세요.");
-            else Toast("아직 소지하지 않은 기록이다.");
+            switch (item)
+            {
+                case InventoryItem.Roster: Read("직원 근무표", RosterText()); break;
+                case InventoryItem.Accident: OpenAccident(); break;
+                case InventoryItem.RepairRequest: Read("수리 요청서", RepairText()); break;
+                case InventoryItem.Diagram: Read("복도 정비도", "외부 배기구를 막은 박스를 내리고 조절판을 외부 쪽으로 돌린다."); break;
+                case InventoryItem.Note: Read("A의 쪽지", "사장님이 수리를 미루고 제가 안에 있는 채 문을 잠갔어요. 이번에는 혼자 두고 가지 말아 주세요."); break;
+            }
         }
         private string RosterText() => $"사고 당일 마감 근무\n\n{tuning.victimNumber}  {tuning.victimName}  —  마지막까지 남은 근무자\nB-021  이도현  —  주간 근무 후 퇴실\nC-032  박지우  —  휴무\n\n사고 당시 인원을 확인해야 한다. 지금의 근무자는 이 표에 없다.";
         private string RepairText() => "냉장 설비 자동 운전 때 타는 냄새가 납니다.\n전원부 피복이 녹고 차단기가 반복해서 내려갑니다. 수리 후 사용해 주세요.\n\n사장 메모  —  비용 때문에 다음 주로 미룸. 영업은 계속할 것.";
