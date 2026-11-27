@@ -32,7 +32,6 @@ namespace NightCafe
                 Wall(center - Vector2.up*size.y/2, new Vector2(size.x,0.25f));
                 Wall(center - Vector2.right*size.x/2, new Vector2(0.25f,size.y));
                 Wall(center + Vector2.right*size.x/2, new Vector2(0.25f,size.y));
-                Label(CafeWorld.RoomNames[i],center + new Vector2(0,-size.y/2+0.7f),24,true);
             }
             Vector2 At(int room, float column, float row) => CafeWorld.PlanPoint(room, column, row);
             Furniture("Security desk", At(8, 3.5f, 1.4f), new Vector2(5, .9f), Wood);
@@ -129,9 +128,18 @@ namespace NightCafe
         {
             var value = Shape(name, pos, size, color, 1, false, Root);
             value.gameObject.layer = RoomLayer(pos);
-            value.gameObject.AddComponent<BoxCollider2D>().size = size;
+            AddGroundCollider(value.gameObject, size);
             Shape("Edge", pos + new Vector2(0, size.y * 0.35f), new Vector2(size.x * 0.94f, 0.045f), new Color(1, 1, 1, 0.15f), 2, false, Root).gameObject.layer = RoomLayer(pos);
         }
+
+        internal static void AddGroundCollider(GameObject obstacle, Vector2 size)
+        {
+            float depth = Mathf.Min(size.y * 0.6f, 1f);
+            var collider = obstacle.AddComponent<BoxCollider2D>();
+            collider.size = new Vector2(size.x, depth);
+            collider.offset = Vector2.down * ((size.y - depth) / 2f);
+        }
+
         private CafeInteractable Item(InteractionKind kind, string title, Vector2 pos, Vector2 size, Color color, bool round = false)
         {
             var visual = Shape(title, pos, size, color, 4, round, Root);

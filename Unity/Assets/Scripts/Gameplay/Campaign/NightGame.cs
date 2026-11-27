@@ -138,11 +138,7 @@ namespace NightCafe
             {
                 MenuInput(); return;
             }
-            if (overlay == Overlay.Reading || overlay == Overlay.Rules)
-            {
-                if (keys.spaceKey.wasPressedThisFrame) CloseOverlay();
-                return;
-            }
+            if (overlay == Overlay.Reading || overlay == Overlay.Rules) return;
             if (overlay == Overlay.StoryForm) { HandleStoryForm(keys); return; }
             if (overlay == Overlay.Detour)
             {
@@ -192,17 +188,20 @@ namespace NightCafe
                     if(item.nightAction==NightAction.Microwave) StartCoroutine(HeatMilk());
                     else UseNightTask(item);
                     break;
-                case InteractionKind.RuleBook: ownsRuleBook = true; OpenRules(); break;
+                case InteractionKind.RuleBook:
+                    if (TryPickUp(item, InventoryItem.RuleBook))
+                    {
+                        ownsRuleBook = true;
+                        OpenRules();
+                    }
+                    break;
                 case InteractionKind.Recipe: OpenRecipe(); break;
                 case InteractionKind.Flashlight:
-                    if (!TryReturnItem(InventoryItem.Flashlight, -1))
+                    if (TryPickUp(item, InventoryItem.Flashlight))
                     {
-                        Toast("인벤토리에 빈칸이 없다.");
-                        break;
+                        ownsFlashlight = true;
+                        Toast("손전등을 챙겼다. Tab을 눌러 인벤토리에서 우클릭해 장비하자.");
                     }
-                    ownsFlashlight = true;
-                    item.gameObject.SetActive(false);
-                    Toast("손전등을 챙겼다. Tab을 눌러 인벤토리에서 우클릭해 장비하자.");
                     break;
                 case InteractionKind.Ingredient:
                     if (Session.Collect(item.ingredient)) Toast(item.title + " 획득. Tab으로 인벤토리를 열고 우클릭해 손에 들 수 있다.");
@@ -225,6 +224,17 @@ namespace NightCafe
                     break;
                 default: Read(item.title, item.description); break;
             }
+        }
+
+        private bool TryPickUp(CafeInteractable item, InventoryItem inventoryItem)
+        {
+            if (!TryReturnItem(inventoryItem, -1))
+            {
+                Toast("인벤토리에 빈칸이 없다.");
+                return false;
+            }
+            item.gameObject.SetActive(false);
+            return true;
         }
 
         private IEnumerator Pour()
@@ -289,7 +299,6 @@ namespace NightCafe
 
         private void OpenRules()
         {
-            if (overlay != Overlay.None || pouring) return;
             if (Day >= 4) { OpenAdvancedNotes(); return; }
             if (laterShift != null)
             {

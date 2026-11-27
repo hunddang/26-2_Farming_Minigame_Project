@@ -40,6 +40,9 @@ namespace NightCafe
             if (Routes != null) Routes.Activate(World,Day);
             InitializeSight();
             if (World.FlashlightPickup != null) World.FlashlightPickup.gameObject.SetActive(!ownsFlashlight);
+            if (ownsRuleBook)
+                foreach (var item in World.Interactables)
+                    if (item.kind == InteractionKind.RuleBook) item.gameObject.SetActive(false);
             if (Day >= 4) { BeginAdvanced(); return; }
             if (Day == 1) return;
 

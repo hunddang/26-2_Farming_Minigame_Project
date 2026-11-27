@@ -67,7 +67,7 @@ namespace NightCafe
         {
             if (cell == hand) game.UnequipInventoryItem(InventoryItemKind.Hand);
             else if (cell == equipment) game.UnequipInventoryItem(InventoryItemKind.Equipment);
-            else game.EquipInventoryItem(cell.Index);
+            else game.UseInventoryItem(cell.Index);
         }
 
         internal void BeginDrag(InventoryCell cell, PointerEventData input)

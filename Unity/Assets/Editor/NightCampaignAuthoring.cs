@@ -188,11 +188,13 @@ public static class NightCampaignAuthoring
             }
             for(int x=-(int)size.x/2+2;x<size.x/2;x+=4)
                 Sprite(hall,"Guide light",new Vector2(x,-size.y/2+0.3f),new Vector2(0.6f,0.08f),CafeUi.Amber,3);
-            void Obstacle(string name, float col, float row, float width, float height, string art, Color color)
+            void Obstacle(string name, float col, float row, float width, float height, string art, Color color,
+                bool structural = false)
             {
                 Vector2 position = CafeWorld.PlanPoint(layer, col + width / 2, row + height / 2) - CafeWorld.RoomCenter(layer);
                 var prop = Sprite(hall, name, position, new Vector2(width, height), color, 3, art);
-                prop.gameObject.AddComponent<BoxCollider2D>().size = prop.size;
+                if (structural) prop.gameObject.AddComponent<BoxCollider2D>().size = prop.size;
+                else CafeWorldAuthoring.AddGroundCollider(prop.gameObject, prop.size);
             }
             var metal = new Color32(123, 141, 172, 255);
             if (layer == NightRoutes.PursuitCorridor)
@@ -202,11 +204,11 @@ public static class NightCampaignAuthoring
                 Obstacle("Service cabinet C", 14, 0, 2, 4, "shelf", metal);
             }
             if (layer is 17 or 18)
-                Obstacle("Equipment partition", 3, 0, 12, size.y - 2, "wall", metal);
+                Obstacle("Equipment partition", 3, 0, 12, size.y - 2, "wall", metal, structural: true);
             if (layer == 16)
             {
-                Obstacle("Cafe exterior wall", 1, 0, 2, 1, "wall", metal);
-                Obstacle("Cafe exterior windows", 1.2f, 4, 1.8f, 3, "monitor", metal);
+                Obstacle("Cafe exterior wall", 1, 0, 2, 1, "wall", metal, structural: true);
+                Obstacle("Cafe exterior windows", 1.2f, 4, 1.8f, 3, "monitor", metal, structural: true);
                 Obstacle("Parked car A", 5, 1, 4, 2, "parked-car", Color.white);
                 Obstacle("Parked car B", 11, 1, 4, 2, "parked-car", new Color32(162, 167, 193, 255));
                 Obstacle("Flower bed A", 5, 9, 3, 1.8f, "plant", metal);

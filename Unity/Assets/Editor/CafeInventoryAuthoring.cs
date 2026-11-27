@@ -37,7 +37,7 @@ internal static class CafeInventoryAuthoring
         for (int index = 0; index < inventory.cells.Length; index++)
             inventory.cells[index] = Slot(grid, $"Slot {index + 1}", CellSize, true);
 
-        CafeUiAuthoring.Label(panel.transform, "우클릭 장착·해제   ·   좌클릭 드래그 이동   ·   문서 들고 Space 읽기",
+        CafeUiAuthoring.Label(panel.transform, "우클릭 장착·문서 읽기   ·   좌클릭 드래그 이동",
             24, 369, 576, 28, 17, CafeUi.Muted, TextAnchor.MiddleCenter);
 
         inventory.dragIcon = CafeUiAuthoring.Panel(shade.transform, "Drag Icon", 0, 0, 68, 68, Color.white);
@@ -78,7 +78,7 @@ internal static class CafeInventoryAuthoring
         var help = panel.GetComponentsInChildren<UnityEngine.UI.Text>(true)
             .Single(text => text.text.StartsWith("우클릭 "));
         help.name = "Inventory Controls";
-        help.text = "우클릭 장착 · 손/장비 칸 우클릭 해제\n좌클릭 드래그 이동 · 문서를 들고 Space 읽기";
+        help.text = "우클릭 장착·문서 읽기 · 손/장비 칸 우클릭 해제\n좌클릭 드래그 이동 · Esc 문서 닫기";
         help.rectTransform.anchoredPosition = new Vector2(24, -361);
         help.rectTransform.sizeDelta = new Vector2(576, 52);
     }

@@ -95,7 +95,16 @@ namespace NightCafe
             if (!Fourth.Spray(valid)) { Toast("가까운 괴물의 정면을 향해야 한다. 분말은 소모되지 않았다."); return; }
             story.powder.transform.position = story.hunter.position; SetLayer(story.powder.transform, CafeWorld.RoomLayer(World.Player.PlanPosition));
             powderUntil = Time.time + 1.2f; story.powder.SetActive(true); story.hunter.gameObject.SetActive(false);
-            sound.PlayOneShot(clatter, 0.35f); Toast("분말을 뒤집어쓴 낙하자가 천장으로 물러났다. 지금은 안전하다.", 6);
+            sound.PlayOneShot(clatter, 0.35f);
+            if (Fourth.Stage != HuntStage.ReadNotes)
+            {
+                Toast("분말을 뒤집어쓴 낙하자가 천장으로 물러났다. 지금은 안전하다.", 6);
+                return;
+            }
+            string noteHint = ownsRuleBook
+                ? "인벤토리에서 전임자의 노트를 우클릭해 다시 읽자."
+                : "감시실에서 전임자의 노트를 챙기자.";
+            Toast("낙하자가 천장으로 물러났다. " + noteHint, 6);
         }
         private IEnumerator DropHunter(string message)
         {

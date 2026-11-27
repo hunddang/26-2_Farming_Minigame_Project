@@ -330,7 +330,7 @@ public static class CafeSceneAuthoring
             var shade = CafeUiAuthoring.Panel(root, "Help", 0, 0, 1920, 1080, new Color(0.02f, 0.04f, 0.05f, 0.96f));
             shade.raycastTarget = true; start.helpPanel = shade.gameObject;
             CafeUiAuthoring.Label(shade.transform, "근무 조작 안내", 400, 175, 1120, 80, 46, CafeUi.Amber);
-            CafeUiAuthoring.Label(shade.transform, "WASD / 방향키     이동 · CCTV 카메라 전환\nSpace                    조사 · 상호작용 · 선택\nShift                      달리기\nF                            장비한 손전등 전원\nTab                        인벤토리 열기 / 닫기\n우클릭                   아이템 장착 · 손/장비 칸에서 해제\nE                           의자 빼 주기\nR                           우회문 퍼즐 초기화\nEsc                        뒤로 · 일시정지\n좌클릭 드래그      인벤토리 아이템 이동", 400, 300, 1120, 430, 29);
+            CafeUiAuthoring.Label(shade.transform, "WASD / 방향키     이동 · CCTV 카메라 전환\nSpace                    조사 · 상호작용 · 선택\nShift                      달리기\nF                            장비한 손전등 전원\nTab                        인벤토리 열기 / 닫기\n우클릭                   아이템 장착 · 문서 읽기 · 손/장비 칸에서 해제\nE                           의자 빼 주기\nR                           우회문 퍼즐 초기화\nEsc                        문서 닫기 · 뒤로 · 일시정지\n좌클릭 드래그      인벤토리 아이템 이동", 400, 300, 1120, 430, 29);
             CafeUiAuthoring.Label(shade.transform, "규칙서와 메모를 읽는 동안에도 시간은 흐릅니다.\nTab 인벤토리와 Esc 일시정지 메뉴에서는 시간이 멈춥니다.", 400, 762, 1120, 90, 24, CafeUi.Muted);
             start.closeHelpButton = CafeUiAuthoring.Button(shade.transform, "돌아가기  [Space / Esc]", 1060, 890, 460, 74, null);
 
@@ -383,7 +383,7 @@ public static class CafeSceneAuthoring
             CafeUiAuthoring.Label(body, "카페모카는 너무 끈적해서 목이 막힌다.", 150, 380, 800, 70, 30);
             CafeUiAuthoring.Label(body, "관찰한 것을 기억할 것.\n레시피는 카페에 보관한다.", 64, 520, 900, 100, 23, CafeUi.Muted);
             CafeUiAuthoring.Label(body, "Tab 인벤토리   ·   읽는 동안에도 사건은 계속됩니다.", 64, 676, 680, 40, 21, CafeUi.Amber);
-            CafeUiAuthoring.Button(body, "덮기  [Esc / Space]", 580, 714, 416, 60, null);
+            CafeUiAuthoring.Button(body, "덮기  [Esc]", 580, 714, 416, 60, null);
 
             panel.SetActive(false);
             return panel;
@@ -394,7 +394,7 @@ public static class CafeSceneAuthoring
             CafeUiAuthoring.Label(body, "현장 기록", 64, 40, 900, 40, 21, CafeUi.Amber);
             view.readingTitle = CafeUiAuthoring.Label(body, "문서 제목", 64, 100, 932, 65, 38);
             view.readingBody = CafeUiAuthoring.Label(body, "문서 내용", 64, 200, 932, 550, 25);
-            CafeUiAuthoring.Button(body, "닫기  [Space / Esc]", 650, 770, 346, 60, null);
+            CafeUiAuthoring.Button(body, "닫기  [Esc]", 650, 770, 346, 60, null);
 
             panel.SetActive(false);
             return panel;

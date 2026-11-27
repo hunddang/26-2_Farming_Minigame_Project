@@ -93,6 +93,35 @@ namespace NightCafe
             Check(game.HeldItem == item || game.EquippedItem == item, $"Right click equips {item}");
             yield return Tap(Key.Tab);
         }
+        private IEnumerator ReadDocument(InventoryItem item)
+        {
+            var held = game.HeldItem;
+            var equipped = game.EquippedItem;
+            yield return Tap(Key.Tab);
+            int slot = Array.FindIndex(game.view.inventory.cells, cell => game.InventoryItemAt(cell.Index) == item);
+            Check(slot >= 0, $"Collected {item} has an inventory cell");
+            if (slot < 0) { yield return Tap(Key.Tab); yield break; }
+            yield return RightClickSlot(slot);
+            Check(!game.view.inventory.gameObject.activeSelf &&
+                (game.view.reading.activeSelf || game.view.rules.activeSelf) &&
+                game.InventoryItemAt(slot) == item && game.HeldItem == held && game.EquippedItem == equipped,
+                $"Right-clicking {item} opens the document and leaves the inventory and equipped items in place");
+        }
+        private IEnumerator CheckNotebook()
+        {
+            var notebook = Item(InteractionKind.RuleBook);
+            game.World.Player.Teleport((Vector2)notebook.transform.position + Vector2.down * .9f);
+            yield return new WaitForSeconds(.1f);
+            Check(game.CurrentTarget == notebook, "The former employee's notebook can be picked up at the desk");
+            yield return Tap(Key.Space);
+            Check(!notebook.gameObject.activeSelf && game.view.rules.activeSelf, "Picking up the notebook removes it from the desk and opens it");
+            yield return Tap(Key.Space);
+            Check(game.view.rules.activeSelf, "Space leaves the rulebook open");
+            yield return Tap(Key.Escape);
+            Check(!game.view.rules.activeSelf, "Escape closes the rulebook");
+            yield return ReadDocument(InventoryItem.RuleBook);
+            yield return Tap(Key.Escape);
+        }
         private IEnumerator CheckFlashlightEquipment()
         {
             var pickup = game.World.FlashlightPickup;
@@ -166,6 +195,28 @@ namespace NightCafe
             yield return null;
             Check(Mathf.Abs(coordinate - Position()) < .48f, "Running reaches the next clear lane around the cabinet");
         }
+        private IEnumerator CheckCabinetFootprint()
+        {
+            var routes = FindFirstObjectByType<NightRoutes>();
+            string room = CafeWorld.RoomNames[NightRoutes.PursuitCorridor - 8];
+            var shelf = routes.routeObjects.transform.Find(room + "/Service cabinet A");
+            var spriteBounds = shelf.GetComponent<SpriteRenderer>().bounds;
+            var footprint = shelf.GetComponent<BoxCollider2D>().bounds;
+            var returnPosition = game.World.Player.PlanPosition;
+            float left = spriteBounds.min.x - .65f;
+            game.World.Player.Teleport(new Vector2(left, spriteBounds.center.y));
+            yield return SprintTo(spriteBounds.max.x + .65f, true);
+
+            game.World.Player.Teleport(new Vector2(left, footprint.center.y));
+            InputSystem.QueueStateEvent(keyboard, new KeyboardState(Key.D, Key.LeftShift));
+            yield return new WaitForSeconds(.45f);
+            InputSystem.QueueStateEvent(keyboard, new KeyboardState());
+            yield return null;
+            float x = game.World.Player.PlanPosition.x;
+            Check(x > left + .1f && x <= footprint.min.x - .25f,
+                "The same shelf still blocks movement through its floor footprint");
+            game.World.Player.Teleport(returnPosition);
+        }
         private IEnumerator Number(string value)
         {
             foreach(char digit in value) yield return Tap(digit=='0'?Key.Digit0:(Key)((int)Key.Digit1+digit-'1'));
@@ -187,6 +238,8 @@ namespace NightCafe
                 if(next!=null && next!=previous && next.Day==day)
                 {
                     game=next;yield return null;yield return null;
+                    Check(!game.World.Interactables.Any(item => item.kind == InteractionKind.RuleBook && item.gameObject.activeSelf),
+                        $"The collected notebook stays off the security desk on night {day}");
                     yield return CheckInventoryPause(() => day switch
                     {
                         4 => game.Fourth.Remaining, 5 => game.Fifth.Remaining, _ => game.Later.Remaining
@@ -216,6 +269,10 @@ namespace NightCafe
                 game.view.transform.Find("Header") == null && game.view.transform.Find("Shift Record") == null &&
                 game.view.transform.Find("Inventory") == null, "Full-screen play area and eight slots replace the marked HUD");
             yield return CheckFlashlightEquipment();
+            yield return CheckNotebook();
+            yield return CheckCabinetFootprint();
+            Check(!game.World.GetComponentsInChildren<UnityEngine.UI.Text>(true)
+                .Any(label => CafeWorld.RoomNames.Take(6).Contains(label.text)), "Room floor captions are removed");
             CheckReachability();
             game.World.Player.Teleport(new Vector2(-15,6.5f));yield return new WaitForSeconds(0.1f);
             Check(game.CurrentTarget!=null && game.CurrentTarget.kind==InteractionKind.Camera,"Security CCTV can be reached");
@@ -387,7 +444,12 @@ namespace NightCafe
             game.story.hunter.position=game.World.Player.PlanPosition+game.World.Player.Facing*2;
             yield return Tap(Key.E);
             Check(game.Fourth.Stage==HuntStage.ReadNotes && game.Fourth.Charges==1,"Real E input suppresses the first chase and preserves one charge");
-            game.Interact(Item(InteractionKind.RuleBook));yield return Shot("10-fourth-note");game.CloseOverlay();
+            yield return ReadDocument(InventoryItem.RuleBook);
+            yield return Tap(Key.Space);
+            Check(game.view.reading.activeSelf, "Space leaves the fourth-night document open");
+            yield return Shot("10-fourth-note");
+            yield return Tap(Key.Escape);
+            Check(!game.view.reading.activeSelf, "Escape closes the fourth-night document");
             Check(game.Fourth.NotesRead,"The same notebook opens the equipment stage");
             game.World.Player.Teleport(new Vector2(18,7));Use(StoryAction.Net);Use(StoryAction.Anchor);yield return null;
             Check(game.Fourth.HasNet && game.Fourth.HasAnchor && game.Fourth.Stage==HuntStage.Equipment,"Both required pieces are picked up in storage");

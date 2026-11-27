@@ -10,7 +10,7 @@ namespace NightCafe
         Roster, Accident, RepairRequest, Diagram, Note, Badge, VictimCup, Flashlight
     }
 
-    internal enum InventoryItemKind { Hand, Equipment, CarryOnly }
+    internal enum InventoryItemKind { Hand, Equipment, Document, CarryOnly }
 
     public sealed partial class NightGame
     {
@@ -32,11 +32,8 @@ namespace NightCafe
             var keys = Keyboard.current;
             if (InventoryOpen)
             {
-                if (keys != null)
-                {
-                    if (keys.tabKey.wasPressedThisFrame || keys.escapeKey.wasPressedThisFrame) CloseInventory();
-                    else if (keys.spaceKey.wasPressedThisFrame && overlay == Overlay.None) ReadHeldInventoryItem();
-                }
+                if (keys != null && (keys.tabKey.wasPressedThisFrame || keys.escapeKey.wasPressedThisFrame))
+                    CloseInventory();
                 return true;
             }
 
@@ -73,7 +70,7 @@ namespace NightCafe
             view.inventory.Refresh();
         }
 
-        internal void EquipInventoryItem(int index)
+        internal void UseInventoryItem(int index)
         {
             if (!InventoryOpen) return;
             var item = inventory[index];
@@ -87,6 +84,9 @@ namespace NightCafe
                     inventory[index] = EquippedItem;
                     SetEquippedItem(item, index);
                     break;
+                case InventoryItemKind.Document:
+                    ReadInventoryDocument(item);
+                    return;
                 default:
                     return;
             }
@@ -144,10 +144,11 @@ namespace NightCafe
         private static InventoryItemKind ItemKind(InventoryItem item) => item switch
         {
             InventoryItem.Flashlight => InventoryItemKind.Equipment,
+            InventoryItem.Recipe or InventoryItem.RuleBook or InventoryItem.Roster or InventoryItem.Accident or
+                InventoryItem.RepairRequest or InventoryItem.Diagram or InventoryItem.Note => InventoryItemKind.Document,
             InventoryItem.Milk or InventoryItem.Chocolate or InventoryItem.Almond or InventoryItem.Tapioca or InventoryItem.Cream or
-                InventoryItem.Recipe or InventoryItem.RuleBook or InventoryItem.WaterCup or InventoryItem.Cloth or InventoryItem.Eraser or
-                InventoryItem.Extinguisher or InventoryItem.Net or InventoryItem.Anchor or InventoryItem.Roster or InventoryItem.Accident or
-                InventoryItem.RepairRequest or InventoryItem.Diagram or InventoryItem.Note or InventoryItem.Badge or InventoryItem.VictimCup
+                InventoryItem.WaterCup or InventoryItem.Cloth or InventoryItem.Eraser or InventoryItem.Extinguisher or
+                InventoryItem.Net or InventoryItem.Anchor or InventoryItem.Badge or InventoryItem.VictimCup
                 => InventoryItemKind.Hand,
             _ => InventoryItemKind.CarryOnly
         };
@@ -230,11 +231,8 @@ namespace NightCafe
             _ => ""
         };
 
-        private void ReadHeldInventoryItem()
+        private void ReadInventoryDocument(InventoryItem item)
         {
-            var item = HeldItem;
-            if (item is not (InventoryItem.RuleBook or InventoryItem.Recipe or InventoryItem.Roster or
-                InventoryItem.Accident or InventoryItem.RepairRequest or InventoryItem.Diagram or InventoryItem.Note)) return;
             CloseInventory();
             if (item == InventoryItem.RuleBook) OpenRules();
             else if (item == InventoryItem.Recipe) OpenRecipe();

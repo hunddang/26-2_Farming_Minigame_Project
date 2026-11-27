@@ -247,7 +247,7 @@ GameObject:
   - component: {fileID: 5046042060458686608}
   - component: {fileID: 1309239068500352285}
   m_Layer: 0
-  m_Name: "\uB2EB\uAE30  [Space / Esc]"
+  m_Name: "\uB2EB\uAE30  [Esc]"
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2450,9 +2450,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: "\uC6B0\uD074\uB9AD \uC7A5\uCC29 \xB7 \uC190/\uC7A5\uBE44 \uCE78 \uC6B0\uD074\uB9AD
-    \uD574\uC81C\n\uC88C\uD074\uB9AD \uB4DC\uB798\uADF8 \uC774\uB3D9 \xB7 \uBB38\uC11C\uB97C
-    \uB4E4\uACE0 Space \uC77D\uAE30"
+  m_Text: "\uC6B0\uD074\uB9AD \uC7A5\uCC29\xB7\uBB38\uC11C \uC77D\uAE30 \xB7 \uC190/\uC7A5\uBE44 \uCE78 \uC6B0\uD074\uB9AD \uD574\uC81C\n\uC88C\uD074\uB9AD \uB4DC\uB798\uADF8 \uC774\uB3D9 \xB7 Esc \uBB38\uC11C \uB2EB\uAE30"
 --- !u!1 &1714771446370149343
 GameObject:
   m_ObjectHideFlags: 0
@@ -7033,7 +7031,7 @@ GameObject:
   - component: {fileID: 5231927497002669047}
   - component: {fileID: 2544575454429010795}
   m_Layer: 0
-  m_Name: "\uB2EB\uAE30  [Space / Esc]"
+  m_Name: "\uB2EB\uAE30  [Esc]"
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -7099,7 +7097,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: "\uB2EB\uAE30  [Space / Esc]"
+  m_Text: "\uB2EB\uAE30  [Esc]"
 --- !u!1 &4858736582616373113
 GameObject:
   m_ObjectHideFlags: 0
@@ -9184,7 +9182,7 @@ GameObject:
   - component: {fileID: 8824804179253255066}
   - component: {fileID: 9191538175077054265}
   m_Layer: 0
-  m_Name: "\uB36E\uAE30  [Tab / Esc / Space]"
+  m_Name: "\uB36E\uAE30  [Esc]"
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -9250,7 +9248,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: "\uB36E\uAE30  [Esc / Space]"
+  m_Text: "\uB36E\uAE30  [Esc]"
 --- !u!1 &6699211796519665096
 GameObject:
   m_ObjectHideFlags: 0
@@ -11172,7 +11170,7 @@ GameObject:
   - component: {fileID: 7082394446635978758}
   - component: {fileID: 8653928019324234464}
   m_Layer: 0
-  m_Name: "\uB36E\uAE30  [Tab / Esc / Space]"
+  m_Name: "\uB36E\uAE30  [Esc]"
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
