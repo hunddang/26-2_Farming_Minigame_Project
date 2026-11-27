@@ -63,6 +63,8 @@ namespace NightCafe
             view.Bind(this);
             clatter = MakeClatter();
             BeginShift();
+            World.Player.RegisterGroundObjects(World.transform);
+            if (Routes != null) World.Player.RegisterGroundObjects(Routes.routeObjects.transform);
             RefreshInventory();
             Toast("감시실 책상에서 손전등을 챙기고 CCTV를 확인하자.", 7);
             if (Day == 1 && Array.IndexOf(Environment.GetCommandLineArgs(), "-foundationSmokeTest") >= 0)
@@ -253,14 +255,18 @@ namespace NightCafe
             if (Session.Phase == ShiftPhase.Incident)
             {
                 bool correct = Session.TryPour();
-                if (!ReturnHeldItem()) SetHeldItem(HeldItem, handReturnSlot);
+                RefreshInventory();
                 if (Session.Phase == ShiftPhase.Resolved)
                 {
                     floodAtResolution = Mathf.Clamp01(1 - Session.Remaining / tuning.incidentSeconds);
                     Toast("흐름이 멈췄다. 커피가 카페모카로 변하고 가루처럼 흩어진다…", 5);
                 }
                 else if (correct) Toast("재료가 섞였다. 흐름은 아직 멈추지 않았다.", 4);
-                else { sound.PlayOneShot(clatter); Toast("컵이 커피를 쏟아냈다! 시간이 줄었다. 투입 순서가 초기화됐다.", 5); }
+                else
+                {
+                    sound.PlayOneShot(clatter);
+                    Toast("컵이 커피를 쏟아냈다! 시간이 줄었다. 카운터에서 필요한 재료를 다시 챙기자.", 5);
+                }
             }
             pouring = false;
         }

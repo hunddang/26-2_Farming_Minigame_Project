@@ -641,7 +641,7 @@ GameObject:
   - component: {fileID: 2035999980826642994}
   - component: {fileID: 6792058854927895567}
   m_Layer: 9
-  m_Name: Illuminated menu board
+  m_Name: Lobby notice board
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

@@ -14,7 +14,7 @@ namespace NightCafe
                     Toast($"카메라 아래에 숫자 {tuning.cameraPassword[DigitRank(item.taskIndex)]}가 적혀 있다. 근무 순위와 대조하자."); break;
                 case StoryAction.Computer: OpenComputer(); break;
                 case StoryAction.FinalMenu:
-                    Read("메뉴판", Fifth.RecordCorrected ? "두 사람의 퇴실이 확인되지 않았습니다." : "근무 종료가 확인되지 않았습니다."); break;
+                    Read("게시판", Fifth.RecordCorrected ? "두 사람의 퇴실이 확인되지 않았습니다." : "근무 종료가 확인되지 않았습니다."); break;
                 case StoryAction.Roster:
                     Fifth.ReadRoster(); Read("사고 당일 직원 근무표", RosterText()); break;
                 case StoryAction.Accident:

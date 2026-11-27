@@ -90,16 +90,15 @@ namespace NightCafe
             if (shift.Phase == ShiftPhase.Failed) return;
             if (shift.Day == 2)
             {
-                cupPickup.SetActive(shift.Water == WaterState.None);
-                clothPickup.SetActive(!shift.HasCloth);
                 bool cleared = shift.Phase == ShiftPhase.Resolved || shift.Phase == ShiftPhase.Complete;
+                cupPickup.SetActive(!cleared && !shift.WetCloth && shift.Water == WaterState.None);
+                clothPickup.SetActive(!cleared && !shift.HasCloth);
                 bool blurred = !cleared && (remoteMenu || shift.Phase == ShiftPhase.Surveillance);
                 menuSmear.SetActive(blurred);
-                menuWriting.gameObject.SetActive(!blurred);
-                menuWriting.text = cleared ? "NIGHT CAFÉ" : "뒤돌아보지 마.";
+                menuWriting.gameObject.SetActive(!cleared && !blurred);
                 Color stain = new Color(0.91f, 0.24f, 0.17f);
                 stain.a = Mathf.Lerp(0.5f, 1f, shift.WipesLeft / 4f);
-                menuWriting.color = cleared ? Color.white : stain;
+                menuWriting.color = stain;
                 return;
             }
 

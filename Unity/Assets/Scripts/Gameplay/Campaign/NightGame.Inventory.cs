@@ -7,7 +7,7 @@ namespace NightCafe
     {
         None, Milk, Chocolate, Almond, Tapioca, Cream, Recipe, RuleBook,
         WaterCup, Cloth, Eraser, Extinguisher, Net, Anchor,
-        Roster, Accident, RepairRequest, Diagram, Note, Badge, VictimCup, Flashlight
+        Roster, Accident, RepairRequest, Diagram, Note, Badge, VictimCup, Flashlight, WetCloth
     }
 
     internal enum InventoryItemKind { Hand, Equipment, Document, CarryOnly }
@@ -66,7 +66,17 @@ namespace NightCafe
         internal void MoveInventoryItem(int source, int destination)
         {
             if (!InventoryOpen || source == destination || inventory[source] == InventoryItem.None) return;
-            (inventory[destination], inventory[source]) = (inventory[source], inventory[destination]);
+            var from = inventory[source];
+            var to = inventory[destination];
+            bool wetClothPair = (from, to) is (InventoryItem.WaterCup, InventoryItem.Cloth)
+                or (InventoryItem.Cloth, InventoryItem.WaterCup);
+            if (Day == 2 && wetClothPair && laterShift.TryMakeWetCloth())
+            {
+                inventory[source] = InventoryItem.None;
+                inventory[destination] = InventoryItem.WetCloth;
+                Toast("젖은 행주를 만들었다. 우클릭해서 손에 들자.");
+            }
+            else (inventory[destination], inventory[source]) = (from, to);
             view.inventory.Refresh();
         }
 
@@ -147,7 +157,7 @@ namespace NightCafe
             InventoryItem.Recipe or InventoryItem.RuleBook or InventoryItem.Roster or InventoryItem.Accident or
                 InventoryItem.RepairRequest or InventoryItem.Diagram or InventoryItem.Note => InventoryItemKind.Document,
             InventoryItem.Milk or InventoryItem.Chocolate or InventoryItem.Almond or InventoryItem.Tapioca or InventoryItem.Cream or
-                InventoryItem.WaterCup or InventoryItem.Cloth or InventoryItem.Eraser or InventoryItem.Extinguisher or
+                InventoryItem.WaterCup or InventoryItem.Cloth or InventoryItem.WetCloth or InventoryItem.Eraser or InventoryItem.Extinguisher or
                 InventoryItem.Net or InventoryItem.Anchor or InventoryItem.Badge or InventoryItem.VictimCup
                 => InventoryItemKind.Hand,
             _ => InventoryItemKind.CarryOnly
@@ -183,7 +193,8 @@ namespace NightCafe
             else if (Day == 2)
             {
                 SetOwned(InventoryItem.WaterCup, laterShift.Water != WaterState.None);
-                SetOwned(InventoryItem.Cloth, laterShift.HasCloth);
+                SetOwned(InventoryItem.Cloth, laterShift.HasCloth && !laterShift.WetCloth);
+                SetOwned(InventoryItem.WetCloth, laterShift.WetCloth);
             }
             else if (Day == 3) SetOwned(InventoryItem.Eraser, laterShift.HasEraser);
             else if (Day == 4)
@@ -215,7 +226,8 @@ namespace NightCafe
             {
                 WaterState.Cold => "찬물이 든 컵", WaterState.Hot => "데운 물이 든 컵", _ => "빈 컵"
             },
-            InventoryItem.Cloth => laterShift.WetCloth ? "젖은 행주" : "마른 행주",
+            InventoryItem.Cloth => "마른 행주",
+            InventoryItem.WetCloth => "젖은 행주",
             InventoryItem.Eraser => "칠판지우개",
             InventoryItem.Extinguisher => "소화기",
             InventoryItem.Net => "포획용 그물",

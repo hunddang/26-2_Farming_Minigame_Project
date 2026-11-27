@@ -201,7 +201,7 @@ namespace NightCafe
             var corridor = routes.routeObjects.transform.Find(room);
             var shelf = corridor.Find("Service cabinet A");
             var spriteBounds = shelf.GetComponent<SpriteRenderer>().bounds;
-            var footprint = shelf.GetComponent<BoxCollider2D>().bounds;
+            var footprint = shelf.GetComponent<Collider2D>().bounds;
             var returnPosition = game.World.Player.PlanPosition;
             float left = spriteBounds.min.x - .65f;
             game.World.Player.Teleport(new Vector2(left, spriteBounds.center.y));
@@ -226,6 +226,46 @@ namespace NightCafe
             Check(y > floorEdge - .6f && y <= floorEdge - .25f,
                 "Sprinting north stops at the visible rear wall, with the player's feet on the floor");
             game.World.Player.Teleport(returnPosition);
+        }
+        private IEnumerator CheckFurnitureSorting(NightRoutes routes)
+        {
+            var player = game.World.Player;
+            var appearance = player.GetComponentInChildren<SpriteRenderer>();
+            var returnPosition = player.PlanPosition;
+            int standingOrder = appearance.sortingOrder;
+            string room = CafeWorld.RoomNames[NightRoutes.PursuitCorridor - 8];
+            var corridor = routes.routeObjects.transform.Find(room);
+            var polygon = corridor.Find("Service cabinet B").GetComponent<PolygonCollider2D>();
+            Check(polygon != null && polygon.pathCount == 1 && polygon.GetPath(0).Length == 4 && polygon.useDelaunayMesh,
+                "Cabinet B keeps the four-point collider from Play Mode");
+
+            var furniture = new[]
+            {
+                corridor.Find("Service cabinet A"), corridor.Find("Service cabinet B"), corridor.Find("Service cabinet C"),
+                game.World.transform.Find("Storage/Furniture/Storage shelf"),
+                game.World.transform.Find("Night Room/Furniture/Staff locker")
+            };
+            foreach (var item in furniture)
+            {
+                var footprint = item.GetComponent<Collider2D>().bounds;
+                player.Teleport(new Vector2(footprint.center.x, footprint.max.y + .35f));
+                yield return null;
+                yield return null;
+                var front = item.GetComponentsInChildren<SpriteRenderer>().Where(sprite => sprite.enabled).ToArray();
+                Check(front.Any(sprite => sprite.bounds.Intersects(appearance.bounds)) &&
+                    front.All(sprite => appearance.sortingOrder < sprite.sortingOrder),
+                    $"Furniture draws over the player from behind: {item.name}");
+            }
+
+            var cabinet = furniture[0].GetComponent<Collider2D>().bounds;
+            player.Teleport(new Vector2(cabinet.center.x, cabinet.min.y - .4f));
+            yield return null;
+            yield return null;
+            Check(appearance.sortingOrder == standingOrder &&
+                appearance.sortingOrder > furniture[0].GetComponent<SpriteRenderer>().sortingOrder,
+                "The player is drawn in front when standing in front of cabinet A");
+            player.Teleport(returnPosition);
+            yield return null;
         }
         private void CheckRoomWalls(NightRoutes routes)
         {
@@ -299,6 +339,7 @@ namespace NightCafe
             yield return CheckNotebook();
             var roomRoutes = FindFirstObjectByType<NightRoutes>();
             yield return CheckCorridorCollision(roomRoutes);
+            yield return CheckFurnitureSorting(roomRoutes);
             CheckRoomWalls(roomRoutes);
             Check(!game.World.GetComponentsInChildren<UnityEngine.UI.Text>(true)
                 .Concat(roomRoutes.routeObjects.GetComponentsInChildren<UnityEngine.UI.Text>(true))
@@ -344,15 +385,23 @@ namespace NightCafe
                 yield return null;
             Check(Array.IndexOf(game.World.CupFrames, cupRenderer.sprite) >= 17,"The GIF reaches its spilling frames in the hall");
             yield return Shot("02b-cup-spill");
+            bool IngredientConsumed(Ingredient ingredient) =>
+                !game.Session.Inventory[(int)ingredient] && game.Session.SelectedSlot == -1 &&
+                game.HeldItem == InventoryItem.None && !game.view.inventory.hand.icon.enabled &&
+                game.view.inventory.cells.All(cell => game.InventoryItemAt(cell.Index) != InventoryItem.Milk + (int)ingredient);
+            var milk = game.World.Interactables.First(i => i.kind == InteractionKind.Ingredient && i.ingredient == Ingredient.Milk);
             game.Interact(Item(InteractionKind.Cup));
-            game.Interact(game.World.Interactables.First(i=>i.kind==InteractionKind.Ingredient && i.ingredient==Ingredient.Milk));
+            game.Interact(milk);
             Check(game.HeldItem == InventoryItem.None && game.Session.SelectedSlot == -1, "Pickup does not equip the ingredient");
             yield return Equip(InventoryItem.Milk);
             game.Interact(Item(InteractionKind.Cup));yield return new WaitForSeconds(0.9f);
-            Check(game.Session.Mistakes==1 && game.Session.Inventory[0],"Wrong first ingredient stays in inventory");
+            Check(game.Session.Mistakes == 1 && IngredientConsumed(Ingredient.Milk),
+                "An ingredient poured in the wrong order disappears from the hand and the bag");
             game.Interact(Item(InteractionKind.Recipe));float before=game.Session.Remaining;
             yield return new WaitForSeconds(0.15f);Check(game.Session.Remaining<before,"Document reading consumes the incident timer");game.CloseOverlay();
             game.World.Player.Teleport(new Vector2(8.5f,10.2f));yield return new WaitForSeconds(0.1f);
+            game.Interact(milk);
+            Check(game.Session.Inventory[(int)Ingredient.Milk] && !game.Session.MilkHeated, "The used milk can be replaced at the counter");
             game.Interact(Task(NightAction.Microwave));yield return new WaitForSeconds(game.Tuning.heatMilkSeconds+0.15f);
             Check(game.Session.MilkHeated,"Milk is heated at the microwave");
             game.World.Player.Teleport(new Vector2(3,-6.3f));
@@ -384,10 +433,13 @@ namespace NightCafe
             yield return Shot("02c-inventory");
             yield return Tap(Key.Tab);
             game.Interact(Item(InteractionKind.Cup));yield return new WaitForSeconds(0.9f);
-            Check(game.Session.RecipeStep==1,"Chocolate is the first recipe ingredient");
+            Check(game.Session.RecipeStep == 1 && IngredientConsumed(Ingredient.Chocolate),
+                "Chocolate advances the recipe and disappears from the hand and the bag");
             yield return Equip(InventoryItem.Milk);
-            game.Interact(Item(InteractionKind.Cup));yield return new WaitForSeconds(0.9f);
-            Check(game.Session.Phase==ShiftPhase.Resolved,"Chocolate and hot milk resolve the espresso");
+            yield return Tap(Key.Space);
+            yield return new WaitForSeconds(0.9f);
+            Check(game.Session.Phase == ShiftPhase.Resolved && IngredientConsumed(Ingredient.Milk),
+                "Pouring hot milk with Space completes the recipe and clears the consumed item");
             yield return Shot("03-mocha-cleanup");yield return new WaitForSeconds(game.Tuning.cleanupSeconds+0.2f);
             game.World.Player.Teleport(CafeWorld.SecuritySpawn);yield return new WaitForSeconds(0.15f);
             Check(game.Phase==ShiftPhase.Complete,"Night one ends on return");yield return Next(2);
@@ -405,12 +457,55 @@ namespace NightCafe
             while(FindFirstObjectByType<NightGame>()==previous && Time.realtimeSinceStartup<retryDeadline)yield return null;
             game=FindFirstObjectByType<NightGame>();yield return null;yield return null;
             Check(game.Day==2 && game.Later.Water==WaterState.None,"Second night retry resets equipment");
-            game.World.Player.Teleport(new Vector2(-11,-5.6f));yield return new WaitForSeconds(0.1f);
-            game.Interact(Task(NightAction.Menu));game.Interact(Task(NightAction.Menu));
-            Check(game.Later.WipesLeft==3,"Dry wiping adds work");
-            foreach(var action in new[]{NightAction.EmptyCup,NightAction.Sink,NightAction.Warmer,NightAction.Cloth})game.Interact(Task(action));
-            game.Interact(Task(NightAction.Menu));for(int i=0;i<3;i++)game.Interact(Task(NightAction.Menu));
-            Check(game.Phase==ShiftPhase.Resolved && !game.Later.RestrictTurning,"Warm wet cloth clears the menu and restriction");
+            var noticeBoard = Task(NightAction.Menu);
+            var wallBoard = game.World.transform.Find("Lobby/Floor & Walls/Lobby notice board");
+            Check(wallBoard != null && noticeBoard.transform.position == wallBoard.position &&
+                noticeBoard.transform.Find("Frame") == null && noticeBoard.transform.Find("Slate") == null,
+                "The night-two interaction uses the wall board and has no separate slate");
+            game.World.Player.Teleport(noticeBoard.InteractionPoint + Vector2.down * .85f);
+            yield return new WaitForSeconds(.1f);
+            Check(game.CurrentTarget == noticeBoard, "The wall board can be reached with Space from the lobby floor");
+            yield return Tap(Key.Space);
+
+            game.Interact(Task(NightAction.Cloth));
+            yield return Equip(InventoryItem.Cloth);
+            yield return Tap(Key.Space);
+            Check(game.Later.WipesLeft == 3, "Holding a dry cloth adds work when wiping");
+            game.Interact(Task(NightAction.EmptyCup));
+            game.Interact(Task(NightAction.Sink));
+            yield return Tap(Key.Tab);
+            yield return RightClickSlot(game.view.inventory.hand);
+            int FindSlot(InventoryItem item) =>
+                Array.FindIndex(game.view.inventory.cells, cell => game.InventoryItemAt(cell.Index) == item);
+            int cup = FindSlot(InventoryItem.WaterCup);
+            int cloth = FindSlot(InventoryItem.Cloth);
+            Check(cup >= 0 && cloth >= 0, "The cold cup and dry cloth occupy separate slots");
+            if (cup >= 0 && cloth >= 0)
+            {
+                yield return DragSlot(cup, SlotPoint(cloth));
+                Check(!game.Later.WetCloth && game.InventoryItemAt(cloth) == InventoryItem.WaterCup &&
+                    game.InventoryItemAt(cup) == InventoryItem.Cloth, "Dropping a cold cup on the cloth swaps the slots");
+            }
+            yield return Tap(Key.Tab);
+            game.Interact(Task(NightAction.Warmer));
+            yield return Tap(Key.Space);
+            Check(!game.Later.WetCloth && game.Later.WipesLeft == 3, "Space does not combine supplies in the bag");
+
+            yield return Tap(Key.Tab);
+            cup = FindSlot(InventoryItem.WaterCup);
+            cloth = FindSlot(InventoryItem.Cloth);
+            if (cup >= 0 && cloth >= 0) yield return DragSlot(cloth, SlotPoint(cup));
+            Check(cup >= 0 && game.InventoryItemAt(cup) == InventoryItem.WetCloth &&
+                FindSlot(InventoryItem.WaterCup) < 0 && FindSlot(InventoryItem.Cloth) < 0 &&
+                game.view.inventory.cells[cup].icon.enabled,
+                "Dragging dry cloth onto a hot cup creates a new wet cloth in the drop slot");
+            yield return Tap(Key.Tab);
+            yield return Tap(Key.Space);
+            Check(game.Later.WipesLeft == 3, "The wet cloth must be held to wipe");
+            yield return Equip(InventoryItem.WetCloth);
+            for (int i = 0; i < 3; i++) yield return Tap(Key.Space);
+            Check(game.Phase == ShiftPhase.Resolved && !game.Later.RestrictTurning && game.HeldItem == InventoryItem.None &&
+                FindSlot(InventoryItem.WetCloth) < 0, "The final wipe resolves the anomaly and clears the wet cloth");
             game.World.Player.Teleport(CafeWorld.SecuritySpawn);yield return new WaitForSeconds(0.15f);yield return Next(3);
 
             var routes=FindFirstObjectByType<NightRoutes>();var content=FindFirstObjectByType<NightContent>();

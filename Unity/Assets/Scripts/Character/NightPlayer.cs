@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -14,6 +15,8 @@ namespace NightCafe
         private bool flashlightPower;
         private Vector2 movement;
         private Vector3 appearanceRestPosition;
+        private int standingOrder;
+        private readonly List<(Collider2D footprint, SpriteRenderer[] sprites)> groundObjects = new();
 
         public Vector2 PlanPosition => transform.position;
 
@@ -32,7 +35,24 @@ namespace NightCafe
             body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
             body.interpolation = RigidbodyInterpolation2D.Interpolate;
             GetComponent<CircleCollider2D>().radius = 0.31f;
-            if (appearance != null) appearanceRestPosition = appearance.transform.localPosition;
+            if (appearance != null)
+            {
+                appearanceRestPosition = appearance.transform.localPosition;
+                standingOrder = appearance.sortingOrder;
+            }
+        }
+
+        internal void RegisterGroundObjects(Transform root)
+        {
+            foreach (var footprint in root.GetComponentsInChildren<Collider2D>(true))
+            {
+                // Furniture uses an inset base box or a polygon drawn around its feet.
+                if (footprint.isTrigger || footprint is BoxCollider2D box && (box.offset.y >= 0 || box.name == "Wall"))
+                    continue;
+                if (footprint is not (BoxCollider2D or PolygonCollider2D)) continue;
+                var sprites = footprint.GetComponentsInChildren<SpriteRenderer>(true);
+                if (sprites.Length > 0) groundObjects.Add((footprint, sprites));
+            }
         }
 
         private void Update()
@@ -59,8 +79,29 @@ namespace NightCafe
 
         private void LateUpdate()
         {
-            if (appearance != null && Facing.x != 0 && Mathf.Abs(Facing.x) >= Mathf.Abs(Facing.y))
+            if (appearance == null) return;
+            if (Facing.x != 0 && Mathf.Abs(Facing.x) >= Mathf.Abs(Facing.y))
                 appearance.flipX = Facing.x < 0;
+
+            int order = standingOrder;
+            Vector2 feet = PlanPosition;
+            var playerBounds = appearance.bounds;
+            int room = CafeWorld.RoomLayer(feet);
+            foreach (var (footprint, sprites) in groundObjects)
+            {
+                if (!footprint.isActiveAndEnabled || footprint.gameObject.layer != room) continue;
+                if (feet.y <= footprint.ClosestPoint(feet).y) continue;
+                foreach (var sprite in sprites)
+                {
+                    if (!sprite.enabled || !sprite.gameObject.activeInHierarchy ||
+                        sprite.sortingLayerID != appearance.sortingLayerID) continue;
+                    var bounds = sprite.bounds;
+                    if (bounds.min.x > playerBounds.max.x || bounds.max.x < playerBounds.min.x ||
+                        bounds.min.y > playerBounds.max.y || bounds.max.y < playerBounds.min.y) continue;
+                    order = Mathf.Min(order, sprite.sortingOrder - 1);
+                }
+            }
+            if (appearance.sortingOrder != order) appearance.sortingOrder = order;
         }
 
         public void Teleport(Vector2 position)

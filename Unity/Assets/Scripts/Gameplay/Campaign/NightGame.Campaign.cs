@@ -75,7 +75,7 @@ namespace NightCafe
                 {
                     World.Player.SnapFacingToCardinal();
                     sound.PlayOneShot(scratch, 0.8f);
-                    Toast("메뉴판에 붉은 글씨가 드러났다. 뒤를 한 번에 돌아보지 마라.", 6);
+                    Toast("게시판에 붉은 글씨가 드러났다. 뒤를 한 번에 돌아보지 마라.", 6);
                 }
                 else Toast("빈 의자에서 그림자가 몸을 일으켰다.");
             }
@@ -98,7 +98,7 @@ namespace NightCafe
         {
             if (laterShift == null) return;
             bool wasStacked = item.nightAction == NightAction.Chair && laterShift.Stacked[item.taskIndex];
-            string message = laterShift.Act(item.nightAction, item.taskIndex, alternate, nightContent.ChalkIdle);
+            string message = laterShift.Act(item.nightAction, item.taskIndex, alternate, nightContent.ChalkIdle, HeldItem);
             if (!wasStacked && item.nightAction == NightAction.Chair && laterShift.Stacked[item.taskIndex])
             {
                 item.Highlight(false);
@@ -181,7 +181,7 @@ namespace NightCafe
                 view.completeHeader.text = $"SHIFT COMPLETE  /  {Day:00}";
                 view.completeTitle.text = Day == 2 ? "두 번째 밤이 끝났다" : "세 번째 밤이 끝났다";
                 view.completeBody.text = Day == 2
-                    ? "메뉴판이 조용해졌다. 감시실 모니터에 다음 근무가 표시된다."
+                    ? "게시판이 조용해졌다. 감시실 모니터에 다음 근무가 표시된다."
                     : "홀과 창고가 조용해졌다. 감시실 모니터에 네 번째 근무가 표시된다.";
                 return;
             }

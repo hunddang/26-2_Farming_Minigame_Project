@@ -74,6 +74,28 @@ SLICES = {
 }
 
 
+def draw_lobby_notices(piece):
+    draw = ImageDraw.Draw(piece)
+    draw.rectangle((9, 19, 130, 48), fill="#322a29")
+    draw.line((10, 20, 129, 20), fill="#4a3730")
+    draw.line((10, 47, 129, 47), fill="#231f23")
+    for x, y in ((12, 25), (34, 42), (46, 24), (54, 39), (73, 25),
+                 (82, 44), (102, 23), (109, 42), (126, 37)):
+        draw.line((x, y, x + 3, y), fill="#3b302e")
+
+    for x, y, width, height, paper, ink in (
+        (15, 23, 13, 17, "#bca47b", "#6d5b50"),
+        (25, 32, 10, 12, "#817d72", "#4d4b4d"),
+        (108, 24, 15, 16, "#a69c7f", "#6a635a"),
+        (119, 33, 8, 11, "#778487", "#49595f"),
+    ):
+        draw.rectangle((x + 1, y + 1, x + width, y + height), fill="#211e23")
+        draw.rectangle((x, y, x + width - 1, y + height - 1), fill=paper)
+        draw.point((x + width // 2, y + 1), fill="#784939")
+        draw.line((x + 2, y + 5, x + width - 3, y + 5), fill=ink)
+        draw.line((x + 2, y + 8, x + width - 4, y + 8), fill=ink)
+
+
 def write(source, name, box, size, *, outline=None, rotate=False):
     piece = source.crop(box).convert("RGBA")
     if outline:
@@ -82,7 +104,10 @@ def write(source, name, box, size, *, outline=None, rotate=False):
         piece.putalpha(mask)
     if rotate:
         piece = piece.transpose(Image.Transpose.ROTATE_90)
-    piece.resize(size, Image.Resampling.NEAREST).save(OUTPUT / f"{name}.png")
+    piece = piece.resize(size, Image.Resampling.NEAREST)
+    if name == "lobby-sign":
+        draw_lobby_notices(piece)
+    piece.save(OUTPUT / f"{name}.png")
 
 
 def main():

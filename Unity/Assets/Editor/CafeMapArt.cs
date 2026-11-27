@@ -93,7 +93,7 @@ internal static class CafeMapArt
                     break;
                 case 9:
                     Patch(structure, layer, "Lobby windows", "lobby-window", 2.1f, .47f, 3.4f, .85f, -2);
-                    Patch(structure, layer, "Illuminated menu board", "lobby-sign", 9.1f, .52f, 2.45f, .92f, -2);
+                    Patch(structure, layer, "Lobby notice board", "lobby-sign", 9.1f, .52f, 2.45f, .92f, -2);
                     Patch(structure, layer, "Bench plinth", "security-tile", 2, 7.1f, 2.75f, 1.65f, -9, true);
                     TileExisting(furniture, "Lobby planter", "security-tile", new Color32(183, 216, 215, 255));
                     Patch(structure, layer, "Main doorway mat", "entry-mat", 1.0f, 4.5f, 1.28f, 1.5f);

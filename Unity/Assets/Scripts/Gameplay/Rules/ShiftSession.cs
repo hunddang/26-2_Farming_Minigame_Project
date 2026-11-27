@@ -70,8 +70,11 @@ namespace NightCafe
         {
             if (Phase != ShiftPhase.Incident || SelectedSlot < 0 || !Inventory[SelectedSlot]) return false;
             Ingredient item = (Ingredient)SelectedSlot;
+            bool correct = item == Tuning.recipe[RecipeStep] && (item != Ingredient.Milk || MilkHeated);
+            Inventory[SelectedSlot] = false;
             SelectedSlot = -1;
-            if (item != Tuning.recipe[RecipeStep] || (item == Ingredient.Milk && !MilkHeated))
+            if (item == Ingredient.Milk) MilkHeated = false;
+            if (!correct)
             {
                 RecipeStep = 0;
                 Mistakes++;

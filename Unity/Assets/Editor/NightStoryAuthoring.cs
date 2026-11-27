@@ -85,7 +85,7 @@ public static class NightStoryAuthoring
         exit.size = new Vector2(CafeWorld.DoorWidth, .48f);
         exit.transform.localRotation = Quaternion.Euler(0, 0, 90);
         F(StoryAction.Departure,"문 안쪽 퇴실 확인 버튼",new Vector2(70.6f,1.6f),"monitor");
-        F(StoryAction.FinalMenu,"로비 메뉴판의 마지막 문장",new Vector2(-11,-4.1f),"paper");
+        F(StoryAction.FinalMenu,"로비 게시판의 마지막 문장",CafeWorld.PlanPoint(9, 9.1f, 1f),"paper");
         content.spirit=Actor(final,"마지막 마감 근무자",new Color32(119,161,155,255),12);
         content.bandage=Group(content.spirit,"Left hand bandage").gameObject;
         Shape(content.bandage.transform,"Bandage",new Vector2(-0.34f,0),new Vector2(0.18f,0.25f),CafeUi.Paper,12);

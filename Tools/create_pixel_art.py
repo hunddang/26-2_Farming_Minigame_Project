@@ -222,6 +222,20 @@ def pixel_prop(name, rows):
 
 pixel_prop('extinguisher', ('..osso..','..olsoo.','..orr.o.','.oRRro..','.oRRro..','.owwro..','.oRRro..','.oRrro..','.ooooo..'))
 pixel_prop('capture-net', ('.osssso.','oslslsl.','oslsslo.','oslslsl.','oslsslo.','oslslsl.','.osssso.','..oooo..'))
+pixel_prop('wet-cloth', (
+    '......o.....',
+    '.....olo....',
+    '.....olo....',
+    '....olllo...',
+    '....osso....',
+    '............',
+    '..oooooo....',
+    '.olllllso...',
+    'olssssllsoo.',
+    'olssllslsso.',
+    '.olsssssso..',
+    '..ooooooo...',
+))
 pixel_prop('anchor-pin', ('..oslo..','.os..lo.','.os..lo.','..oslo..','...lo...','...so...','...so...','...oo...'))
 pixel_prop('exhaust-crate', ('oooooooo','oBBBBBbo','obwBBbBo','oBwBbBbo','oBBBbBBo','oBBbBBbo','obbbbbbo','oooooooo'))
 pixel_prop('staff-badge', ('..oss...','..olso..','.oooooo.','olwwwwso','olsswwso','olwwssso','olssssso','.oooooo.'))

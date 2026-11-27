@@ -53,6 +53,7 @@ internal static class CafeInventoryAuthoring
         Icon(InventoryItem.Anchor, "anchor-pin"); Icon(InventoryItem.Roster, "paper"); Icon(InventoryItem.Accident, "book");
         Icon(InventoryItem.RepairRequest, "recipe"); Icon(InventoryItem.Diagram, "paper"); Icon(InventoryItem.Note, "note");
         Icon(InventoryItem.Badge, "staff-badge"); Icon(InventoryItem.VictimCup, "cup");
+        Icon(InventoryItem.WetCloth, "wet-cloth");
         ConfigureEquipmentSlots(inventory);
         shade.gameObject.SetActive(false);
     }
@@ -78,7 +79,7 @@ internal static class CafeInventoryAuthoring
         var help = panel.GetComponentsInChildren<UnityEngine.UI.Text>(true)
             .Single(text => text.text.StartsWith("우클릭 "));
         help.name = "Inventory Controls";
-        help.text = "우클릭 장착·문서 읽기 · 손/장비 칸 우클릭 해제\n좌클릭 드래그 이동 · Esc 문서 닫기";
+        help.text = "우클릭 장착·문서 읽기 · 손/장비 칸 우클릭 해제\n좌클릭 드래그 이동·조합 · Esc 문서 닫기";
         help.rectTransform.anchoredPosition = new Vector2(24, -361);
         help.rectTransform.sizeDelta = new Vector2(576, 52);
     }

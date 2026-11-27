@@ -75,17 +75,28 @@ namespace NightCafe
             if (Phase == ShiftPhase.Resolved) Phase = ShiftPhase.Complete;
         }
 
-        public string Act(NightAction action, int index = 0, bool alternate = false, bool chalkIdle = false)
+        public bool TryMakeWetCloth()
         {
-            if (Phase != ShiftPhase.Incident) return "지금은 처리할 이상현상이 없다.";
-            return Day == 2 ? CleanMenu(action) : CloseCafe(action, index, alternate, chalkIdle);
+            if (Day != 2 || Phase != ShiftPhase.Incident || Water != WaterState.Hot || !HasCloth || WetCloth)
+                return false;
+            Water = WaterState.None;
+            WetCloth = true;
+            return true;
         }
 
-        private string CleanMenu(NightAction action)
+        public string Act(NightAction action, int index = 0, bool alternate = false, bool chalkIdle = false,
+            InventoryItem heldItem = InventoryItem.None)
+        {
+            if (Phase != ShiftPhase.Incident) return "지금은 처리할 이상현상이 없다.";
+            return Day == 2 ? CleanMenu(action, heldItem) : CloseCafe(action, index, alternate, chalkIdle);
+        }
+
+        private string CleanMenu(NightAction action, InventoryItem heldItem)
         {
             switch (action)
             {
                 case NightAction.EmptyCup:
+                    if (WetCloth) return "이미 행주를 적셨다.";
                     if (Water != WaterState.None) return "이미 컵을 챙겼다.";
                     Water = WaterState.Empty;
                     return "빈 컵을 챙겼다.";
@@ -107,17 +118,15 @@ namespace NightCafe
                         MenuInspected = true;
                         return "「뒤돌아보지 마.」 손톱자국 사이로 붉은 얼룩이 흐른다.";
                     }
-                    if (!HasCloth || Water != WaterState.Hot)
+                    if (heldItem == InventoryItem.Cloth && HasCloth && !WetCloth)
                     {
                         WipesLeft = Math.Min(6, WipesLeft + 1);
                         return "마른 상태로 문지르자 얼룩이 더 번졌다.";
                     }
-                    if (!WetCloth)
-                    {
-                        WetCloth = true;
-                        return "데운 물을 행주에 묻혔다.";
-                    }
+                    if (!WetCloth) return "인벤토리에서 데운 물이 든 컵과 마른 행주를 겹쳐 행주를 적시자.";
+                    if (heldItem != InventoryItem.WetCloth) return "젖은 행주를 손에 들고 얼룩을 닦자.";
                     if (--WipesLeft > 0) return "붉은 얼룩이 조금 옅어졌다.";
+                    WetCloth = HasCloth = false;
                     Phase = ShiftPhase.Resolved;
                     return "자국이 사라졌다. 감시실로 돌아가자.";
                 default: return "";

@@ -2450,7 +2450,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: "\uC6B0\uD074\uB9AD \uC7A5\uCC29\xB7\uBB38\uC11C \uC77D\uAE30 \xB7 \uC190/\uC7A5\uBE44 \uCE78 \uC6B0\uD074\uB9AD \uD574\uC81C\n\uC88C\uD074\uB9AD \uB4DC\uB798\uADF8 \uC774\uB3D9 \xB7 Esc \uBB38\uC11C \uB2EB\uAE30"
+  m_Text: "\uC6B0\uD074\uB9AD \uC7A5\uCC29\xB7\uBB38\uC11C \uC77D\uAE30 \xB7 \uC190/\uC7A5\uBE44 \uCE78 \uC6B0\uD074\uB9AD \uD574\uC81C\n\uC88C\uD074\uB9AD \uB4DC\uB798\uADF8 \uC774\uB3D9\xB7\uC870\uD569 \xB7 Esc \uBB38\uC11C \uB2EB\uAE30"
 --- !u!1 &1714771446370149343
 GameObject:
   m_ObjectHideFlags: 0
@@ -3598,6 +3598,7 @@ MonoBehaviour:
   - {fileID: 21300000, guid: daebad785e898c748b7c9e9b0ba6678c, type: 3}
   - {fileID: 21300000, guid: efdd28a4b52a3104b9fdc8d5360f1267, type: 3}
   - {fileID: 21300000, guid: 38aa13f929053904aa9d72def7195562, type: 3}
+  - {fileID: 21300000, guid: e37ca61f1deb44dba8ebab8d1f75525f, type: 3}
 --- !u!1 &2528905826124865985
 GameObject:
   m_ObjectHideFlags: 0

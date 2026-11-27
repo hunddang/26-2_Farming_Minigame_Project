@@ -28,7 +28,7 @@ public static class NightCampaignAuthoring
             field.objectReferenceValue = content;
             serialized.ApplyModifiedPropertiesWithoutUndo();
             BindLabels(game.view);
-            CreateMenuNight(content);
+            CreateMenuNight(content, game.World);
             CreateShadowNight(content, game.World);
             content.menuNight.SetActive(false);
             content.shadowNight.SetActive(false);
@@ -70,25 +70,28 @@ public static class NightCampaignAuthoring
         PrefabUtility.RecordPrefabInstancePropertyModifications(view);
     }
 
-    private static void CreateMenuNight(NightContent content)
+    private static void CreateMenuNight(NightContent content, CafeWorld world)
     {
-        var root = Group(content.transform, "Night 02 · Lobby menu");
+        var root = Group(content.transform, "Night 02 · Lobby notice board");
         content.menuNight = root.gameObject;
-        var menu = Task(root, "로비 메뉴판", CafeWorld.PlanPoint(9, 7.6f, 1.25f), 9, NightAction.Menu);
-        Board(menu.transform, new Vector2(2.9f, 1.5f));
+        var board = world.transform.Find("Lobby/Floor & Walls/Lobby notice board").GetComponent<SpriteRenderer>();
+        var menu = Task(root, "로비 게시판", board.transform.position, 9, NightAction.Menu);
+        menu.ConfigureMarker(board);
         content.menuBoard = menu;
-        content.menuWriting = Writing(menu.transform, "…  /  …  /  …", new Color32(232, 79, 61, 255), 18);
+        content.menuWriting = Writing(menu.transform, "뒤돌아보지 마.", new Color32(232, 79, 61, 255), 14);
+        content.menuWriting.transform.parent.localPosition = Vector3.down * .14f;
         var smear = Group(menu.transform, "Obscured writing on CCTV");
+        smear.localPosition = Vector3.down * .14f;
         content.menuSmear = smear.gameObject;
         for (int i = 0; i < 12; i++)
         {
-            var mark = Sprite(smear, "Unreadable stain", new Vector2(-1.1f + i * 0.2f, Mathf.Sin(i * 5.3f) * 0.084f),
-                new Vector2(0.17f, 0.052f + i % 3 * 0.034f), i % 4 == 0 ? new Color32(188, 74, 53, 255) : new Color32(111, 46, 41, 255), 9);
+            var mark = Sprite(smear, "Unreadable stain", new Vector2(-.68f + i * .124f, Mathf.Sin(i * 5.3f) * .052f),
+                new Vector2(.11f, .035f + i % 3 * .022f), i % 4 == 0 ? new Color32(188, 74, 53, 255) : new Color32(111, 46, 41, 255), 9);
             mark.transform.localRotation = Quaternion.Euler(0, 0, -25 + i * 17 % 50);
         }
 
-        var hint = Notice(root, "메뉴판 아래 종이", CafeWorld.PlanPoint(9, 7.6f, 2.15f), 9,
-            "지워지지 않는 얼룩은 바로 문지르지 말고, 따뜻한 물을 묻힌 행주로 닦아야 한다.");
+        var hint = Notice(root, "게시판 옆 메모", CafeWorld.PlanPoint(9, 10.75f, 1.18f), 9,
+            "마른 행주로 문지르면 얼룩이 번진다.\n\nTab 인벤토리를 열고 데운 물이 든 컵과 마른 행주를 겹쳐 놓자. 젖은 행주를 우클릭해 손에 든 뒤 게시판을 닦으면 된다.");
         var cup = Task(root, "빈 컵", CafeWorld.PlanPoint(13, 5.2f, 1.6f), 13, NightAction.EmptyCup);
         AddTaskArt(cup, "cup", new Vector2(0.66f, 0.66f));
         content.cupPickup = cup.gameObject;
@@ -189,18 +192,31 @@ public static class NightCampaignAuthoring
             for(int x=-(int)size.x/2+2;x<size.x/2;x+=4)
                 Sprite(hall,"Guide light",new Vector2(x,-size.y/2+0.3f),new Vector2(0.6f,0.08f),CafeUi.Amber,3);
             void Obstacle(string name, float col, float row, float width, float height, string art, Color color,
-                bool structural = false)
+                bool structural = false, Vector2[] outline = null)
             {
                 Vector2 position = CafeWorld.PlanPoint(layer, col + width / 2, row + height / 2) - CafeWorld.RoomCenter(layer);
                 var prop = Sprite(hall, name, position, new Vector2(width, height), color, 3, art);
-                if (structural) prop.gameObject.AddComponent<BoxCollider2D>().size = prop.size;
+                if (outline != null)
+                {
+                    var collider = prop.gameObject.AddComponent<PolygonCollider2D>();
+                    collider.pathCount = 1;
+                    collider.SetPath(0, outline);
+                    collider.useDelaunayMesh = true;
+                }
+                else if (structural) prop.gameObject.AddComponent<BoxCollider2D>().size = prop.size;
                 else CafeWorldAuthoring.AddGroundCollider(prop.gameObject, prop.size);
             }
             var metal = new Color32(123, 141, 172, 255);
             if (layer == NightRoutes.PursuitCorridor)
             {
                 Obstacle("Service cabinet A", 6, 0, 2, 4, "shelf", metal);
-                Obstacle("Service cabinet B", 10, 2, 2, 4, "shelf", metal);
+                Obstacle("Service cabinet B", 10, 2, 2, 4, "shelf", metal, outline: new[]
+                {
+                    new Vector2(0.9978412f, -1.5672734f),
+                    new Vector2(-0.4590237f, -0.6605682f),
+                    new Vector2(-0.94049954f, -1.0161368f),
+                    new Vector2(0.49932528f, -1.9353019f)
+                });
                 Obstacle("Service cabinet C", 14, 0, 2, 4, "shelf", metal);
             }
             if (layer is 17 or 18)

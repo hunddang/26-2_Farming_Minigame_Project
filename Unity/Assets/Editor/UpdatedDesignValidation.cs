@@ -20,15 +20,22 @@ public static class UpdatedDesignValidation
         day.Tick(1); Check(day.Remaining == 180 && day.DiscoveryRemaining == tuning.discoverySeconds - 1, "Discovery timeout is separate from the incident timer");
         day.StartIncident(); day.Collect(Ingredient.Milk);
         Check(day.SelectedSlot == -1, "Picking up an ingredient does not put it in hand");
+        day.Collect(Ingredient.Almond);
         day.HoldIngredient(0);
-        Check(!day.TryPour() && day.Inventory[0], "Wrong first ingredient is retained");
+        Check(!day.TryPour() && !day.Inventory[0] && day.Inventory[(int)Ingredient.Almond] && day.SelectedSlot == -1,
+            "A wrong pour uses only the selected ingredient");
         Check(day.RecipeStep == 0 && day.Mistakes == 1, "Wrong ingredient resets recipe progress");
         day.Collect(Ingredient.Chocolate); day.HoldIngredient(1);
-        Check(day.TryPour() && day.RecipeStep == 1, "Chocolate must be first");
-        day.HoldIngredient(0); Check(!day.TryPour() && day.Inventory[0] && day.Inventory[1], "Cold milk is wrong and previously used ingredients survive");
-        day.HoldIngredient(1); Check(day.TryPour(), "Chocolate can be reused after a mistake");
+        Check(day.TryPour() && day.RecipeStep == 1 && !day.Inventory[1], "Chocolate is consumed at the first recipe step");
+        Check(day.Collect(Ingredient.Milk), "A consumed ingredient can be picked up again");
+        day.HoldIngredient(0);
+        Check(!day.TryPour() && !day.Inventory[0] && day.RecipeStep == 0, "Cold milk is consumed and resets the recipe");
+        day.Collect(Ingredient.Chocolate); day.HoldIngredient(1);
+        Check(day.TryPour(), "Fresh chocolate can be used after a mistake");
+        day.Collect(Ingredient.Milk);
         Check(day.HeatMilk(), "Microwave heats owned milk"); day.HoldIngredient(0);
-        Check(day.TryPour() && day.Phase == ShiftPhase.Resolved, "Hot milk resolves the revised mocha recipe");
+        Check(day.TryPour() && day.Phase == ShiftPhase.Resolved && !day.Inventory[0] && !day.MilkHeated,
+            "Hot milk completes the recipe and its heating state clears with the consumed milk");
         day.ReturnToSecurity(); Check(day.Phase == ShiftPhase.Resolved, "Cleanup must finish before returning");
         day.Tick(4); day.ReturnToSecurity(); Check(day.Phase == ShiftPhase.Complete, "Automatic cleanup and return complete night one");
         day = new ShiftSession(tuning); day.Tick(tuning.discoverySeconds);
@@ -36,12 +43,22 @@ public static class UpdatedDesignValidation
         day.RetryIncident(); Check(day.Remaining == 180 && day.SelectedSlot == -1 && !day.MilkHeated, "Night-one retry resets incident items and heating");
 
         var second = new LaterShift(2, 300, 0); second.EnterSite();
-        second.Act(NightAction.Menu); second.Act(NightAction.Menu);
-        Check(second.WipesLeft == 3, "Unprepared wiping adds work");
-        foreach (var action in new[] { NightAction.EmptyCup, NightAction.Sink, NightAction.Warmer, NightAction.Cloth }) second.Act(action);
-        second.Act(NightAction.Menu); Check(second.WetCloth && second.Water == WaterState.Hot, "Hot water wets the owned cloth");
-        for (int i = 0; i < 3; i++) second.Act(NightAction.Menu);
-        Check(second.Phase == ShiftPhase.Resolved && !second.RestrictTurning, "Wiping clears the turning restriction");
+        second.Act(NightAction.Menu);
+        second.Act(NightAction.Cloth);
+        second.Act(NightAction.Menu, heldItem: InventoryItem.Cloth);
+        Check(second.WipesLeft == 3, "Wiping with a held dry cloth adds work");
+        second.Act(NightAction.EmptyCup); second.Act(NightAction.Sink);
+        Check(!second.TryMakeWetCloth() && second.Water == WaterState.Cold, "Cold water cannot be combined with the cloth");
+        second.Act(NightAction.Warmer);
+        second.Act(NightAction.Menu);
+        Check(!second.WetCloth && second.WipesLeft == 3, "The board does not automatically combine items");
+        Check(second.TryMakeWetCloth() && second.WetCloth && second.Water == WaterState.None,
+            "Combining hot water with the dry cloth uses the cup");
+        second.Act(NightAction.Menu);
+        Check(second.WipesLeft == 3, "A cloth in the bag does not wipe the board");
+        for (int i = 0; i < 3; i++) second.Act(NightAction.Menu, heldItem: InventoryItem.WetCloth);
+        Check(second.Phase == ShiftPhase.Resolved && !second.RestrictTurning && !second.WetCloth,
+            "Wiping with the wet cloth clears the board and consumes the cloth on the final wipe");
         var third = new LaterShift(3, 360, 8); third.EnterSite();
         for (int i = 0; i < 8; i++) third.Act(NightAction.Chair, i);
         Check(third.Warehouse && third.Phase == ShiftPhase.Incident, "All chairs start the warehouse encounter without completing the night");
