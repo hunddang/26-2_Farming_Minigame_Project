@@ -37,7 +37,6 @@ namespace NightCafe
             Vector2 At(int room, float column, float row) => CafeWorld.PlanPoint(room, column, row);
             Furniture("Security desk", At(8, 3.5f, 1.4f), new Vector2(5, .9f), Wood);
             Item(InteractionKind.Camera, "CCTV 단말기", At(8, 3.4f, 1.97f), new Vector2(1.05f, .71f), Teal);
-            Item(InteractionKind.Note, "사장의 포스트잇", At(8, 5.55f, 1.97f), Vector2.one * .55f, CafeUi.Amber);
             Item(InteractionKind.RuleBook, "전 알바생의 노트", At(8, 1.6f, 1.97f), new Vector2(.7f, .8f), CafeUi.Paper);
 
             Furniture("Lobby bench", At(9, 2, 7.1f), new Vector2(2, 1), Wood);

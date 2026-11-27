@@ -69,7 +69,7 @@ namespace NightCafe
             view.Bind(this);
             clatter = MakeClatter();
             BeginShift();
-            Toast("감시실에서 근무를 시작했다. 사장이 남긴 메모와 CCTV를 확인하자.", 7);
+            Toast("감시실에서 근무를 시작했다. 책상 단말기에서 CCTV와 메모를 확인하자.", 7);
             if (Day == 1 && Array.IndexOf(Environment.GetCommandLineArgs(), "-foundationSmokeTest") >= 0)
                 new GameObject("Foundation Smoke Test").AddComponent<FoundationSmokeTest>().game = this;
         }
@@ -203,8 +203,6 @@ namespace NightCafe
                     if(item.nightAction==NightAction.Microwave) StartCoroutine(HeatMilk());
                     else UseNightTask(item);
                     break;
-                case InteractionKind.Note:
-                    Read("사장이 남긴 메모", DeskNote + "\n\n규칙서는 책상에 두었어요. 꼭 챙겨 읽어 주세요."); break;
                 case InteractionKind.RuleBook: OpenRules(); break;
                 case InteractionKind.Recipe:
                     Session.RecipeRead = true;
