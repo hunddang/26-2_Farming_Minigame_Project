@@ -17,6 +17,23 @@ namespace NightCafe
         public bool securityDoor;
         [SerializeField] private SpriteRenderer marker;
         [SerializeField] private Color original = Color.white;
+
+        public Vector2 InteractionPoint
+        {
+            get
+            {
+                Vector2 point = transform.position;
+                int room = gameObject.layer;
+                if (room >= CafeWorld.SecurityRoomLayer && room - CafeWorld.SecurityRoomLayer < CafeWorld.Sizes.Length)
+                {
+                    // Wall-mounted objects are reached from the floor below the wall.
+                    float floorEdge = CafeWorld.Bounds(room).yMax - CafeWorld.RearWallDepth;
+                    point.y = Mathf.Min(point.y, floorEdge - .05f);
+                }
+                return point;
+            }
+        }
+
         private void Awake()
         {
             if (marker == null) marker = GetComponent<SpriteRenderer>();

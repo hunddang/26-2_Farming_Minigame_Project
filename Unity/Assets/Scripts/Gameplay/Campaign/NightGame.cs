@@ -160,10 +160,11 @@ namespace NightCafe
             foreach (var item in World.Interactables)
             {
                 if (!item.isActiveAndEnabled) continue;
-                float distance = Vector2.Distance(player, (Vector2)item.transform.position);
+                Vector2 target = item.InteractionPoint;
+                float distance = Vector2.Distance(player, target);
                 if (distance >= closest) continue;
                 // Walls/counters cannot be interacted through. The target door itself is allowed.
-                var hits = Physics2D.LinecastAll(player, item.transform.position);
+                var hits = Physics2D.LinecastAll(player, target);
                 bool blocked = false;
                 foreach (var hit in hits)
                     if (hit.collider.gameObject != World.Player.gameObject && hit.collider.gameObject != item.gameObject && !hit.collider.isTrigger)

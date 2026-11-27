@@ -195,11 +195,11 @@ namespace NightCafe
             yield return null;
             Check(Mathf.Abs(coordinate - Position()) < .48f, "Running reaches the next clear lane around the cabinet");
         }
-        private IEnumerator CheckCabinetFootprint()
+        private IEnumerator CheckCorridorCollision(NightRoutes routes)
         {
-            var routes = FindFirstObjectByType<NightRoutes>();
             string room = CafeWorld.RoomNames[NightRoutes.PursuitCorridor - 8];
-            var shelf = routes.routeObjects.transform.Find(room + "/Service cabinet A");
+            var corridor = routes.routeObjects.transform.Find(room);
+            var shelf = corridor.Find("Service cabinet A");
             var spriteBounds = shelf.GetComponent<SpriteRenderer>().bounds;
             var footprint = shelf.GetComponent<BoxCollider2D>().bounds;
             var returnPosition = game.World.Player.PlanPosition;
@@ -215,7 +215,34 @@ namespace NightCafe
             float x = game.World.Player.PlanPosition.x;
             Check(x > left + .1f && x <= footprint.min.x - .25f,
                 "The same shelf still blocks movement through its floor footprint");
+
+            float floorEdge = corridor.Find("Rear wall facing").GetComponent<SpriteRenderer>().bounds.min.y;
+            game.World.Player.Teleport(new Vector2(left, floorEdge - .7f));
+            InputSystem.QueueStateEvent(keyboard, new KeyboardState(Key.W, Key.LeftShift));
+            yield return new WaitForSeconds(.45f);
+            InputSystem.QueueStateEvent(keyboard, new KeyboardState());
+            yield return null;
+            float y = game.World.Player.PlanPosition.y;
+            Check(y > floorEdge - .6f && y <= floorEdge - .25f,
+                "Sprinting north stops at the visible rear wall, with the player's feet on the floor");
             game.World.Player.Teleport(returnPosition);
+        }
+        private void CheckRoomWalls(NightRoutes routes)
+        {
+            var walls = game.World.GetComponentsInChildren<SpriteRenderer>()
+                .Concat(routes.routeObjects.GetComponentsInChildren<SpriteRenderer>())
+                .Where(sprite => sprite.name == "Rear wall facing").ToArray();
+            Check(walls.Length == CafeWorld.RoomNames.Length, "Every room has a rear wall facing");
+            foreach (var facing in walls)
+            {
+                int room = facing.gameObject.layer;
+                var bounds = facing.bounds;
+                var blocker = facing.transform.parent.GetComponentsInChildren<BoxCollider2D>()
+                    .Single(wall => wall.name == "Wall" && Mathf.Abs(wall.transform.position.y - bounds.max.y) < .005f);
+                Check(Mathf.Abs(blocker.bounds.min.y - bounds.min.y) < .005f &&
+                    blocker.bounds.min.x <= bounds.min.x && blocker.bounds.max.x >= bounds.max.x,
+                    $"The rear wall covers the visible wall in room {room}");
+            }
         }
         private IEnumerator Number(string value)
         {
@@ -270,9 +297,12 @@ namespace NightCafe
                 game.view.transform.Find("Inventory") == null, "Full-screen play area and eight slots replace the marked HUD");
             yield return CheckFlashlightEquipment();
             yield return CheckNotebook();
-            yield return CheckCabinetFootprint();
+            var roomRoutes = FindFirstObjectByType<NightRoutes>();
+            yield return CheckCorridorCollision(roomRoutes);
+            CheckRoomWalls(roomRoutes);
             Check(!game.World.GetComponentsInChildren<UnityEngine.UI.Text>(true)
-                .Any(label => CafeWorld.RoomNames.Take(6).Contains(label.text)), "Room floor captions are removed");
+                .Concat(roomRoutes.routeObjects.GetComponentsInChildren<UnityEngine.UI.Text>(true))
+                .Any(label => CafeWorld.RoomNames.Contains(label.text)), "Rooms and shortcuts show no world-space room captions");
             CheckReachability();
             game.World.Player.Teleport(new Vector2(-15,6.5f));yield return new WaitForSeconds(0.1f);
             Check(game.CurrentTarget!=null && game.CurrentTarget.kind==InteractionKind.Camera,"Security CCTV can be reached");
@@ -406,7 +436,7 @@ namespace NightCafe
             yield return SprintTo(-2f, false);
             Check(Vector3.Distance(pursuerStart, routes.pursuer.position) > .4f, "The pursuer closes in during corridor traversal");
             yield return SprintTo(89.15f, true);
-            yield return SprintTo(2f, false);
+            yield return SprintTo(1.4f, false);
             yield return SprintTo(93.2f, true);
             yield return SprintTo(-2f, false);
             yield return SprintTo(98.65f, true);
@@ -598,10 +628,11 @@ namespace NightCafe
                 }
                 foreach(var item in allItems.Where(i=>CafeWorld.RoomLayer(i.transform.position)==room))
                 {
+                    Vector2 target = item.InteractionPoint;
                     bool accessible=reached.Any(node=>
                     {
                         Vector2 point=Point(node);
-                        return Vector2.Distance(point,item.transform.position)<game.Tuning.interactionDistance && Physics2D.LinecastAll(point,item.transform.position)
+                        return Vector2.Distance(point,target)<game.Tuning.interactionDistance && Physics2D.LinecastAll(point,target)
                             .All(hit=>hit.collider.isTrigger || hit.collider.gameObject==game.World.Player.gameObject || hit.collider.gameObject==item.gameObject);
                     });
                     Check(accessible,"Reachable interaction in "+CafeWorld.RoomNames[room-8]+": "+item.title);

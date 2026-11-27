@@ -305,12 +305,8 @@ public static class NightCampaignAuthoring
             if (props != null)
             {
                 props.name = "Shortcut Signs and Lamps";
-                foreach (var text in props.GetComponentsInChildren<Text>(true))
-                {
-                    text.text = roomName;
-                    text.fontSize = 18;
-                    text.rectTransform.anchoredPosition = new Vector2(6, 0);
-                }
+                foreach (var label in props.GetComponentsInChildren<Canvas>(true).Where(canvas => canvas.name == "Writing"))
+                    UnityEngine.Object.DestroyImmediate(label.gameObject);
                 foreach (var graphic in props.GetComponentsInChildren<SpriteRenderer>(true))
                 {
                     if (graphic.name is "Warning Light" or "Emergency Lamp" or "Guide Lamp")
@@ -336,9 +332,6 @@ public static class NightCampaignAuthoring
                     new Vector3(end, size.y / 2 - 0.72f, 0));
                 Sprite(sign, "Signboard", Vector2.zero, new Vector2(2.9f, .72f), new Color32(40, 27, 44, 255), 5);
                 Sprite(sign, "Guide Lamp", new Vector2(-1.22f, 0), new Vector2(.14f, .31f), guideLight, 6);
-                var text = Writing(sign, roomName, CafeUi.Paper, 18);
-                text.rectTransform.sizeDelta = new Vector2(145, 50);
-                text.rectTransform.anchoredPosition = new Vector2(6, 0);
                 for (int stripe = 0; stripe < 4; stripe++)
                     Sprite(props, "Floor Marker", new Vector2(end, (stripe - 1.5f) * .58f),
                         new Vector2(.24f, .26f), guideMark, -8);

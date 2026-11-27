@@ -201,12 +201,19 @@ internal static class CafeMapArt
         var size = CafeWorld.Sizes[index];
         var floor = parent.Find(floorName).GetComponent<SpriteRenderer>();
         Style(floor, Pieces + Floors[index], size, true);
+        float rearEdge = CafeWorld.Bounds(layer).yMax;
         foreach (var wall in parent.Cast<Transform>().Where(child => child.name == "Wall"))
         {
             var renderer = wall.GetComponent<SpriteRenderer>();
             Style(renderer, Pieces + (renderer.size.x < renderer.size.y ? "steel-rail-side" : "steel-rail"), renderer.size, true);
+            if (!Mathf.Approximately(wall.position.y, rearEdge)) continue;
+            var collider = wall.GetComponent<BoxCollider2D>();
+            float outerHalf = renderer.size.y * .5f;
+            collider.size = new Vector2(renderer.size.x, outerHalf + CafeWorld.RearWallDepth);
+            collider.offset = Vector2.up * ((outerHalf - CafeWorld.RearWallDepth) * .5f);
         }
-        Patch(parent, layer, "Rear wall facing", Walls[index], size.x / 2, .49f, size.x - .25f, .98f, -4, true);
+        Patch(parent, layer, "Rear wall facing", Walls[index], size.x / 2, CafeWorld.RearWallDepth * .5f,
+            size.x - .25f, CafeWorld.RearWallDepth, -4, true);
     }
 
     private static void StyleFurniture(Transform parent)

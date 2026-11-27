@@ -44,6 +44,7 @@ namespace NightCafe
         public const int PixelsPerTile = 64;
         public const int SecurityRoomLayer = 8;
         public const float DoorWidth = 2;
+        public const float RearWallDepth = .98f;
         public const int BlackoutChannels = 4;
         public static readonly int[] CameraRooms = { 10, 13, 11, 12, 8, 9, 16, 15, 14, 17, 18 };
         public static int CameraChannel(int room) => System.Array.IndexOf(CameraRooms, room);
